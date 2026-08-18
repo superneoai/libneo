@@ -1,4 +1,8 @@
-//! Implements native integration with AppKit.
+//! Implements the native views with AppKit.
+
+pub(crate) mod chrome;
+mod handle;
+pub(crate) mod visual_effect;
 
 use objc2::MainThreadMarker;
 use objc2_foundation::{NSOperatingSystemVersion, NSProcessInfo};

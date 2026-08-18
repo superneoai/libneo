@@ -2,18 +2,22 @@
 
 use gpui::colors::GlobalColors;
 use gpui::{App, Context, Entity, Global, IntoElement, Render, Window};
+use objc2::MainThreadMarker;
 
 const INSTALL_MESSAGE: &str =
     "libneo is not installed; call libneo::install(cx) before opening windows";
-
 struct Lifecycle;
 
 impl Global for Lifecycle {}
 
 /// Initializes libneo for an existing GPUI application.
 ///
-/// Call this once before opening any windows. Calling it again on the same
-/// [`App`] preserves existing colors and theme state.
+/// Call this once in the callback passed to `gpui_platform::Application::run`,
+/// before opening any windows. Calling it again on the same [`App`] is safe and
+/// leaves existing colors, theme state, and native registries intact.
+///
+/// Every window that uses libneo native elements must also wrap its root entity
+/// in [`NativeRoot`]. [`crate::window::run`] performs both steps automatically.
 ///
 /// # Panics
 ///
@@ -28,6 +32,7 @@ fn install_components(cx: &mut App) {
     let plan = InstallPlan::for_state(ComponentState {
         colors: cx.has_global::<GlobalColors>(),
         theme: cx.has_global::<crate::theme::Theme>(),
+        native_views: crate::native_views::is_initialized(cx),
         lifecycle: cx.has_global::<Lifecycle>(),
     });
     if plan.colors {
@@ -35,6 +40,9 @@ fn install_components(cx: &mut App) {
     }
     if plan.theme {
         crate::theme::init(cx);
+    }
+    if plan.native_views {
+        crate::native_views::init(cx);
     }
     if plan.lifecycle {
         cx.set_global(Lifecycle);
@@ -45,6 +53,7 @@ fn install_components(cx: &mut App) {
 struct ComponentState {
     colors: bool,
     theme: bool,
+    native_views: bool,
     lifecycle: bool,
 }
 
@@ -52,6 +61,7 @@ struct ComponentState {
 struct InstallPlan {
     colors: bool,
     theme: bool,
+    native_views: bool,
     lifecycle: bool,
 }
 
@@ -60,6 +70,7 @@ impl InstallPlan {
         Self {
             colors: !state.colors,
             theme: !state.theme,
+            native_views: !state.native_views,
             lifecycle: !state.lifecycle,
         }
     }
@@ -69,13 +80,29 @@ pub(crate) fn assert_installed(cx: &App) {
     assert!(cx.has_global::<Lifecycle>(), "{INSTALL_MESSAGE}");
 }
 
-/// Wraps a GPUI window root and observes its native appearance each frame.
+pub(crate) fn main_thread_marker(cx: &App) -> MainThreadMarker {
+    assert_installed(cx);
+    MainThreadMarker::new().expect("libneo lifecycle operations must run on the main thread")
+}
+
+/// Wraps a GPUI window root and reconciles its native views each frame.
+///
+/// Create the application's existing root entity as usual, pass it to
+/// [`NativeRoot::new`], and return an entity containing this wrapper from
+/// `App::open_window`. Use one wrapper for every window that renders libneo
+/// glass effect or native text table elements.
+///
+/// Call [`install`] before opening the window. Rendering this wrapper without
+/// installation panics with an order-specific message.
 pub struct NativeRoot<V: Render> {
     content: Entity<V>,
 }
 
 impl<V: Render> NativeRoot<V> {
-    /// Creates a lifecycle root around an existing GPUI root entity.
+    /// Creates a native lifecycle root around an existing GPUI root entity.
+    ///
+    /// [`install`] must have been called on the application before the wrapper
+    /// is first rendered.
     pub fn new(content: Entity<V>) -> Self {
         Self { content }
     }
@@ -98,6 +125,7 @@ mod tests {
         let plan = InstallPlan::for_state(ComponentState {
             colors: false,
             theme: false,
+            native_views: false,
             lifecycle: false,
         });
 
@@ -106,6 +134,7 @@ mod tests {
             InstallPlan {
                 colors: true,
                 theme: true,
+                native_views: true,
                 lifecycle: true,
             }
         );
@@ -116,6 +145,7 @@ mod tests {
         let plan = InstallPlan::for_state(ComponentState {
             colors: true,
             theme: true,
+            native_views: true,
             lifecycle: true,
         });
 
@@ -124,6 +154,7 @@ mod tests {
             InstallPlan {
                 colors: false,
                 theme: false,
+                native_views: false,
                 lifecycle: false,
             }
         );
@@ -134,6 +165,7 @@ mod tests {
         let plan = InstallPlan::for_state(ComponentState {
             colors: true,
             theme: false,
+            native_views: true,
             lifecycle: false,
         });
 
@@ -142,6 +174,7 @@ mod tests {
             InstallPlan {
                 colors: false,
                 theme: true,
+                native_views: false,
                 lifecycle: true,
             }
         );

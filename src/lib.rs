@@ -10,6 +10,7 @@
 //! every window root that uses native elements in [`NativeRoot`].
 
 pub mod glass;
+pub mod layers;
 mod lifecycle;
 mod native_views;
 mod platform;

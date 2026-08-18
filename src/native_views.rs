@@ -11,17 +11,21 @@ use objc2::MainThreadMarker;
 use crate::glass::GlassEffectFrame;
 use crate::platform::mac::chrome::NativeWindowChrome;
 use crate::platform::mac::glass::NativeGlassEffectRegistry;
+use crate::platform::mac::table::NativeTextTableRegistry;
 use crate::platform::mac::visual_effect::NativeWindowBackgroundRegistry;
+use crate::table::TextTableFrame;
 use crate::window::{WindowBackground, WindowChrome};
 
 #[derive(Default)]
 struct PendingFrame {
     glass_effects: HashMap<String, GlassEffectFrame>,
+    text_tables: HashMap<String, TextTableFrame>,
 }
 
 #[derive(Default)]
 struct PlatformNativeViewRegistry {
     glass_effects: NativeGlassEffectRegistry,
+    text_tables: NativeTextTableRegistry,
     window_backgrounds: NativeWindowBackgroundRegistry,
     chrome: HashMap<WindowId, NativeWindowChrome>,
 }
@@ -95,6 +99,31 @@ pub(crate) fn record_glass_effect(
     Ok(())
 }
 
+pub(crate) fn record_text_table(
+    window_id: WindowId,
+    window: &Window,
+    frame: TextTableFrame,
+    mtm: MainThreadMarker,
+    cx: &mut App,
+) -> Result<(), String> {
+    crate::lifecycle::assert_installed(cx);
+    let registry = cx.global_mut::<NativeViewRegistry>();
+    if !registry.pending.contains_key(&window_id) {
+        return Err(crate::lifecycle::missing_root_message().to_owned());
+    }
+    registry
+        .native
+        .text_tables
+        .ensure_window(window_id, window, mtm)?;
+    registry
+        .pending
+        .get_mut(&window_id)
+        .expect("the pending frame was checked above")
+        .text_tables
+        .insert(frame.id.clone(), frame);
+    Ok(())
+}
+
 /// Starts one frame, and schedules the update of the native views.
 pub(crate) fn begin_frame(window: &mut Window, cx: &mut App) {
     crate::lifecycle::assert_installed(cx);
@@ -116,6 +145,14 @@ pub(crate) fn begin_frame(window: &mut Window, cx: &mut App) {
         };
         let mtm = MainThreadMarker::new().expect("frame callbacks run on the main thread");
         let registry = cx.global_mut::<NativeViewRegistry>();
+        if let Err(error) = registry.native.text_tables.flush(
+            window_id,
+            window,
+            pending.text_tables.into_values().collect(),
+            mtm,
+        ) {
+            panic!("the text tables must update: {error}");
+        }
         if let Err(error) = registry.native.glass_effects.flush(
             window_id,
             window,
@@ -136,6 +173,7 @@ pub(crate) fn init(cx: &mut App) {
         registry.pending.remove(&window_id);
         registry.scheduled.remove(&window_id);
         registry.native.glass_effects.remove_window(window_id);
+        registry.native.text_tables.remove_window(window_id);
         registry.native.window_backgrounds.remove_window(window_id);
         registry.native.chrome.remove(&window_id);
     });

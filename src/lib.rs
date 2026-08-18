@@ -1,7 +1,9 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 
-//! libneo builds native macOS application windows with GPUI and AppKit.
+//! libneo builds native macOS application windows and glass effects with GPUI and
+//! AppKit.
 
+pub mod glass;
 mod lifecycle;
 mod native_views;
 mod platform;

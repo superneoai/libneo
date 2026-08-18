@@ -6,6 +6,9 @@ use objc2::MainThreadMarker;
 
 const INSTALL_MESSAGE: &str =
     "libneo is not installed; call libneo::install(cx) before opening windows";
+const ROOT_MESSAGE: &str =
+    "libneo native elements require each GPUI window root to be wrapped in libneo::NativeRoot";
+
 struct Lifecycle;
 
 impl Global for Lifecycle {}
@@ -85,6 +88,10 @@ pub(crate) fn main_thread_marker(cx: &App) -> MainThreadMarker {
     MainThreadMarker::new().expect("libneo lifecycle operations must run on the main thread")
 }
 
+pub(crate) fn missing_root_message() -> &'static str {
+    ROOT_MESSAGE
+}
+
 /// Wraps a GPUI window root and reconciles its native views each frame.
 ///
 /// Create the application's existing root entity as usual, pass it to
@@ -112,6 +119,7 @@ impl<V: Render> Render for NativeRoot<V> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         assert_installed(cx);
         crate::theme::observe_window(window, cx);
+        crate::native_views::begin_frame(window, cx);
         self.content.clone()
     }
 }

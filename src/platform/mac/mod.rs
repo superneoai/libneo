@@ -1,6 +1,7 @@
 //! Implements the native views with AppKit.
 
 pub(crate) mod chrome;
+pub(crate) mod glass;
 mod handle;
 pub(crate) mod visual_effect;
 

@@ -1,0 +1,10 @@
+[package]
+name = "ztracing"
+description = "A tracing compatibility crate for GPUI"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+tracing = { version = "0.1", features = ["attributes"] }

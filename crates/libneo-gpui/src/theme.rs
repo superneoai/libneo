@@ -101,7 +101,7 @@ impl Theme {
     ///
     /// # Panics
     ///
-    /// This function panics if [`crate::install`] has not initialized libneo.
+    /// This function panics if [`crate::install`] has not initialized libneo-gpui.
     pub fn global(cx: &App) -> &Self {
         crate::lifecycle::assert_installed(cx);
         cx.global::<Self>()
@@ -126,7 +126,7 @@ impl Theme {
     ///
     /// # Panics
     ///
-    /// This function panics if [`crate::install`] has not initialized libneo.
+    /// This function panics if [`crate::install`] has not initialized libneo-gpui.
     pub fn set_mode(mode: ThemeMode, cx: &mut App) {
         crate::lifecycle::assert_installed(cx);
         let window_override = match mode {

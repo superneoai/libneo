@@ -17,19 +17,19 @@ fn main() {
     let value = match env::var("MACOSX_DEPLOYMENT_TARGET") {
         Ok(value) => value,
         Err(_) => fail(
-            "MACOSX_DEPLOYMENT_TARGET is missing; libneo consumers must set it to at least 26.1 \
-             in .cargo/config.toml",
+            "MACOSX_DEPLOYMENT_TARGET is missing; libneo-gpui consumers must set it to at least \
+             26.1 in .cargo/config.toml",
         ),
     };
     let version = match parse(&value) {
         Ok(version) => version,
         Err(reason) => fail(&format!(
-            "MACOSX_DEPLOYMENT_TARGET={value:?} is invalid ({reason}); libneo requires 26.1 or later"
+            "MACOSX_DEPLOYMENT_TARGET={value:?} is invalid ({reason}); libneo-gpui requires 26.1 or later"
         )),
     };
     if version < MINIMUM_MACOS {
         fail(&format!(
-            "MACOSX_DEPLOYMENT_TARGET={value:?} is too low; libneo requires 26.1 or later"
+            "MACOSX_DEPLOYMENT_TARGET={value:?} is too low; libneo-gpui requires 26.1 or later"
         ));
     }
 }

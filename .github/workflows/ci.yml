@@ -26,18 +26,45 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       - name: Format
         run: cargo fmt --all --check
+      - name: Verify facade dependency isolation
+        run: |
+          tree_file=$(mktemp)
+          cargo tree -p libneo --no-default-features --locked > "$tree_file"
+          cat "$tree_file"
+          if [ "$(wc -l < "$tree_file" | tr -d ' ')" -ne 1 ]; then
+            echo "the default libneo facade must have no dependencies" >&2
+            exit 1
+          fi
+      - name: Verify GPUI feature graph
+        run: |
+          tree_file=$(mktemp)
+          cargo tree -p libneo --features gpui --locked > "$tree_file"
+          cat "$tree_file"
+          grep -F "libneo-gpui v0.1.0-alpha.1" "$tree_file"
       - name: Build
         run: cargo build --workspace --locked
+      - name: Check
+        run: |
+          cargo check --workspace --locked
+          cargo check -p libneo --features gpui --locked
       - name: Check x86_64
-        run: cargo check --workspace --locked --target x86_64-apple-darwin
+        run: |
+          cargo check --workspace --locked --target x86_64-apple-darwin
+          cargo check -p libneo --features gpui --locked --target x86_64-apple-darwin
       - name: Lint
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: |
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo clippy -p libneo --all-targets --features gpui --locked -- -D warnings
       - name: Test
-        run: cargo test --workspace --locked
+        run: |
+          cargo test --workspace --locked
+          cargo test -p libneo --features gpui --locked
       - name: Test the patched block crate
         run: cargo test --manifest-path vendor/block/Cargo.toml
       - name: Document
-        run: cargo doc --workspace --no-deps --locked
+        run: |
+          cargo doc --workspace --no-deps --locked
+          cargo doc -p libneo --features gpui --no-deps --locked
         env:
           RUSTDOCFLAGS: -D warnings -D missing-docs
       - name: Verify the SDK

@@ -21,7 +21,7 @@ const MINIMUM_MACOS: NSOperatingSystemVersion = NSOperatingSystemVersion {
 ///
 /// This function panics off the main thread, and on systems before macOS 26.1.
 pub(crate) fn assert_supported_os() -> MainThreadMarker {
-    let mtm = MainThreadMarker::new().expect("libneo must be installed on the main thread");
+    let mtm = MainThreadMarker::new().expect("libneo-gpui must be installed on the main thread");
     let process_info = NSProcessInfo::processInfo();
     assert!(
         process_info.isOperatingSystemAtLeastVersion(MINIMUM_MACOS),

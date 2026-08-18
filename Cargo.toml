@@ -1,6 +1,9 @@
-[package]
-name = "libneo"
-description = "AppKit integration for GPUI applications on macOS"
+[workspace]
+members = ["crates/libneo", "crates/libneo-gpui", "vendor/ztracing"]
+exclude = ["vendor/block"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0-alpha.1"
 edition = "2024"
 rust-version = "1.97"
@@ -8,80 +11,15 @@ authors = ["ACTUAL LTD."]
 repository = "https://github.com/superneoai/libneo"
 license = "MIT OR Apache-2.0"
 publish = false
-keywords = ["gpui", "macos", "appkit", "gui"]
-categories = ["gui", "os::macos-apis"]
-build = "build.rs"
 
-[dependencies]
-gpui = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6", features = [
-  "font-kit",
-] }
-refineable = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6" }
-objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", default-features = false, features = [
-  "NSClipView",
-  "NSColor",
-  "NSControl",
-  "NSFont",
-  "NSFontDescriptor",
-  "NSGlassEffectView",
-  "NSLayoutAnchor",
-  "NSLayoutConstraint",
-  "NSResponder",
-  "NSScrollView",
-  "NSSplitView",
-  "NSStackView",
-
-  "NSSplitViewController",
-  "NSSplitViewItem",
-  "NSSplitViewItemAccessoryViewController",
-  "NSTableHeaderView",
-  "NSTableView",
-  "NSTableColumn",
-  "NSTableRowView",
-  "NSCell",
-  "NSUserInterfaceItemIdentification",
-  "NSTextField",
-  "NSTitlebarAccessoryViewController",
-  "NSImage",
-  "NSAppearance",
-  "NSButton",
-  "NSButtonCell",
-  "NSToolbar",
-  "NSToolbarItem",
-  "NSView",
-  "NSViewController",
-  "NSVisualEffectView",
-  "NSWindow",
-  "objc2-core-foundation",
-] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = [
-  "NSGeometry",
-  "NSObject",
-  "NSProcessInfo",
-  "NSString",
-] }
-raw-window-handle = "0.6"
-
-[workspace]
-members = ["vendor/ztracing"]
-exclude = ["vendor/block"]
-resolver = "3"
-
-# GPUI links `ztracing`, which Zed publishes under `GPL-3.0-or-later`. This
-# compatibility crate supplies the imported tracing items under permissive
-# terms. Zed tracks the license state in
-# https://github.com/zed-industries/zed/issues/55470.
+# Replace GPUI's `ztracing` package with the permissive compatibility crate.
 [patch."https://github.com/zed-industries/zed"]
 ztracing = { path = "vendor/ztracing" }
 
-# Use Zed's published font-kit release so the locked graph has no second Git
-# source. This is the same package and version required by the Zed revision.
+# Use the crates.io font-kit package required by the pinned Zed revision.
 [patch."https://github.com/zed-industries/font-kit"]
 zed-font-kit = { version = "=0.14.1-zed" }
 
-# block 0.1.6 declares an FFI static with an uninhabited type. The local copy
-# uses an inhabited opaque type so future Rust releases continue to accept it.
+# Fix block 0.1.6's uninhabited FFI static type.
 [patch.crates-io]
 block = { path = "vendor/block" }

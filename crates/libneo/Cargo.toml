@@ -1,0 +1,18 @@
+[package]
+name = "libneo"
+description = "A dependency-neutral facade for libneo integration packages"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+readme = "../../README.md"
+
+[features]
+default = []
+gpui = ["dep:libneo-gpui"]
+
+[dependencies]
+libneo-gpui = { path = "../libneo-gpui", version = "=0.1.0-alpha.1", optional = true }

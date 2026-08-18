@@ -1,26 +1,27 @@
-//! Integrates libneo with an existing GPUI application and its windows.
+//! Integrates libneo-gpui with an existing GPUI application and its windows.
 
 use gpui::colors::GlobalColors;
 use gpui::{App, Context, Entity, Global, IntoElement, Render, Window};
 use objc2::MainThreadMarker;
 
 const INSTALL_MESSAGE: &str =
-    "libneo is not installed; call libneo::install(cx) before opening windows";
+    "libneo-gpui is not installed; call libneo::install(cx) before opening windows";
 const ROOT_MESSAGE: &str =
-    "libneo native elements require each GPUI window root to be wrapped in libneo::NativeRoot";
+    "libneo-gpui native elements require each GPUI window root to be wrapped in libneo::NativeRoot";
 
 struct Lifecycle;
 
 impl Global for Lifecycle {}
 
-/// Initializes libneo for an existing GPUI application.
+/// Initializes libneo-gpui for an existing GPUI application.
 ///
 /// Call this once in the callback passed to `gpui_platform::Application::run`,
 /// before opening any windows. Calling it again on the same [`App`] is safe and
 /// leaves existing colors, theme state, and native registries intact.
 ///
-/// Every window that uses libneo native elements must also wrap its root entity
-/// in [`NativeRoot`]. [`crate::window::run`] performs both steps automatically.
+/// Every window that uses libneo-gpui native elements must also wrap its root
+/// entity in [`NativeRoot`]. [`crate::window::run`] performs both steps
+/// automatically.
 ///
 /// # Panics
 ///
@@ -85,7 +86,7 @@ pub(crate) fn assert_installed(cx: &App) {
 
 pub(crate) fn main_thread_marker(cx: &App) -> MainThreadMarker {
     assert_installed(cx);
-    MainThreadMarker::new().expect("libneo lifecycle operations must run on the main thread")
+    MainThreadMarker::new().expect("libneo-gpui lifecycle operations must run on the main thread")
 }
 
 pub(crate) fn missing_root_message() -> &'static str {
@@ -96,7 +97,7 @@ pub(crate) fn missing_root_message() -> &'static str {
 ///
 /// Create the application's existing root entity as usual, pass it to
 /// [`NativeRoot::new`], and return an entity containing this wrapper from
-/// `App::open_window`. Use one wrapper for every window that renders libneo
+/// `App::open_window`. Use one wrapper for every window that renders libneo-gpui
 /// glass effect or native text table elements.
 ///
 /// Call [`install`] before opening the window. Rendering this wrapper without
@@ -126,7 +127,15 @@ impl<V: Render> Render for NativeRoot<V> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ComponentState, InstallPlan};
+    use super::{ComponentState, INSTALL_MESSAGE, InstallPlan};
+
+    #[test]
+    fn missing_install_diagnostic_is_actionable() {
+        assert_eq!(
+            INSTALL_MESSAGE,
+            "libneo-gpui is not installed; call libneo::install(cx) before opening windows"
+        );
+    }
 
     #[test]
     fn first_install_initializes_every_component() {

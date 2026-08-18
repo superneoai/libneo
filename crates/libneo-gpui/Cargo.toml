@@ -1,0 +1,65 @@
+[package]
+name = "libneo-gpui"
+description = "AppKit integration for GPUI applications on macOS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+readme = "README.md"
+build = "build.rs"
+keywords = ["gpui", "macos", "appkit", "gui"]
+categories = ["gui", "os::macos-apis"]
+
+[dependencies]
+gpui = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6", features = [
+  "font-kit",
+] }
+refineable = { git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6" }
+objc2 = "0.6.4"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+  "NSClipView",
+  "NSColor",
+  "NSControl",
+  "NSFont",
+  "NSFontDescriptor",
+  "NSGlassEffectView",
+  "NSLayoutAnchor",
+  "NSLayoutConstraint",
+  "NSResponder",
+  "NSScrollView",
+  "NSSplitView",
+  "NSStackView",
+  "NSSplitViewController",
+  "NSSplitViewItem",
+  "NSSplitViewItemAccessoryViewController",
+  "NSTableHeaderView",
+  "NSTableView",
+  "NSTableColumn",
+  "NSTableRowView",
+  "NSCell",
+  "NSUserInterfaceItemIdentification",
+  "NSTextField",
+  "NSTitlebarAccessoryViewController",
+  "NSImage",
+  "NSAppearance",
+  "NSButton",
+  "NSButtonCell",
+  "NSToolbar",
+  "NSToolbarItem",
+  "NSView",
+  "NSViewController",
+  "NSVisualEffectView",
+  "NSWindow",
+  "objc2-core-foundation",
+] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+  "NSGeometry",
+  "NSObject",
+  "NSProcessInfo",
+  "NSString",
+] }
+raw-window-handle = "0.6"

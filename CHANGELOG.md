@@ -3,8 +3,8 @@
 This file records umbrella and facade changes. Focused package changelogs record
 adapter changes.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.0-alpha.1]
 

@@ -17,7 +17,7 @@ and uses public AppKit APIs.
 
 ## Consumer setup
 
-libneo-gpui is distributed from this Git repository and is not published to
+This Git repository distributes libneo-gpui. The package does not go to
 crates.io. The `libneo` facade exposes it through the opt-in `gpui` feature.
 
 libneo-gpui supports only macOS 26.1 and later. Set the deployment target in the
@@ -29,7 +29,7 @@ MACOSX_DEPLOYMENT_TARGET = "26.1"
 ```
 
 The dependency build script rejects a missing, invalid, or lower macOS target.
-Non-macOS targets are unsupported.
+libneo-gpui supports macOS only.
 
 ### GPUI compatibility
 

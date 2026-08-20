@@ -14,11 +14,11 @@ Adapters are opt-in features.
 Enable `libneo`'s `gpui` feature to preserve the existing API, including
 `libneo::install`, `libneo::NativeRoot`, and the public modules for windows,
 glass, tables, layers, and themes. The macOS 26.1 deployment-target check runs
-only when `libneo-gpui` is selected.
+only when you select `libneo-gpui`.
 
 ## Consumer setup
 
-The packages are distributed from this Git repository and are not published to
+This Git repository distributes the packages. The packages do not go to
 crates.io.
 
 ```toml

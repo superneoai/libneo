@@ -26,25 +26,20 @@ allow = [
 ]
 # Copyleft licenses, including every GPL variant, are intentionally omitted.
 
-[[licenses.clarify]]
-name = "gpui_shared_string"
-expression = "Apache-2.0"
-license-files = []
-
-[[licenses.clarify]]
-name = "gpui_util"
-expression = "Apache-2.0"
-license-files = []
-
 [bans]
 multiple-versions = "allow"
+wildcards = "deny"
 
 [advisories]
 version = 2
+yanked = "deny"
+unmaintained = "all"
+unsound = "all"
+unused-ignored-advisory = "deny"
 ignore = [
-  { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency of the pinned GPUI revision; no maintained release is available in this graph" },
-  { id = "RUSTSEC-2026-0192", reason = "ttf-parser is a transitive dependency of the pinned GPUI revision; the advisory has no safe upgrade" },
-  { id = "RUSTSEC-2026-0206", reason = "rustybuzz is a transitive dependency of the pinned GPUI revision; the advisory has no safe upgrade" },
+  { id = "RUSTSEC-2024-0436", reason = "Review by 2026-11-21: paste 1.0.15 is a compile-time macro dependency through metal and pulp; this is an unmaintained notice, not a vulnerability, no patched release exists, and current Zed main still resolves it" },
+  { id = "RUSTSEC-2026-0192", reason = "Review by 2026-11-21: ttf-parser 0.25.1 is runtime-reachable through GPUI text and font parsing; this is an unmaintained notice, not a vulnerability, no patched release exists, and current Zed main still pins 0.25" },
+  { id = "RUSTSEC-2026-0206", reason = "Review by 2026-11-21: rustybuzz 0.20.1 is behind GPUI SVG rendering, which libneo does not invoke internally; this is an unmaintained notice, not a vulnerability, no patched release exists, and current Zed main still resolves it" },
 ]
 
 [sources]

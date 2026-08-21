@@ -272,6 +272,60 @@ impl WindowBuilder {
             ..WindowOptions::default()
         }
     }
+
+    /// Opens one configured window and returns its GPUI handle.
+    ///
+    /// Call [`crate::install`] before this method. The returned root wraps the
+    /// caller's root in [`crate::NativeRoot`] so native elements reconcile each
+    /// frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when GPUI cannot open the window.
+    ///
+    /// # Panics
+    ///
+    /// Panics when libneo-gpui is not installed, when called off the main
+    /// thread, when a fixed corner radius is below the named system floor for
+    /// the selected chrome or is not finite, or when native presentation
+    /// cannot be attached.
+    pub fn open<V>(
+        self,
+        cx: &mut App,
+        build_root: impl FnOnce(&mut Context<V>) -> V + 'static,
+    ) -> anyhow::Result<gpui::WindowHandle<crate::NativeRoot<V>>>
+    where
+        V: Render + 'static,
+    {
+        crate::lifecycle::assert_installed(cx);
+        let options = self.window_options(cx);
+        let background = self.background;
+        let chrome = self.chrome;
+        let corner_radius = match self.corner_radius {
+            WindowCornerRadius::System => None,
+            WindowCornerRadius::Fixed(radius) => {
+                validate_fixed_corner_radius(radius, &chrome)
+                    .unwrap_or_else(|error| panic!("{error}"));
+                Some(radius)
+            }
+        };
+
+        cx.open_window(options, move |gpui_window, cx| {
+            let mtm = crate::lifecycle::main_thread_marker(cx);
+            crate::native_views::configure_window_chrome(gpui_window, chrome, mtm, cx)
+                .expect("the window chrome must apply");
+            crate::native_views::configure_window_background(
+                gpui_window,
+                background,
+                corner_radius,
+                mtm,
+                cx,
+            )
+            .expect("the window background and corner shape must apply");
+            let content = cx.new(build_root);
+            cx.new(|_| crate::NativeRoot::new(content))
+        })
+    }
 }
 
 /// Runs the application and opens one window that shows `build_root`.
@@ -287,37 +341,7 @@ where
 {
     gpui_platform::application().run(move |cx: &mut App| {
         crate::install(cx);
-        let options = window.window_options(cx);
-        let background = window.background;
-        let chrome = window.chrome;
-        let corner_radius = match window.corner_radius {
-            WindowCornerRadius::System => None,
-            WindowCornerRadius::Fixed(radius) => {
-                validate_fixed_corner_radius(radius, &chrome)
-                    .unwrap_or_else(|error| panic!("{error}"));
-                Some(radius)
-            }
-        };
-
-        cx.open_window(options, move |gpui_window, cx| {
-            let mtm = crate::lifecycle::main_thread_marker(cx);
-            crate::native_views::configure_window_chrome(gpui_window, chrome, mtm, cx)
-                .expect("the window chrome must apply");
-            crate::native_views::configure_window_background(gpui_window, background, mtm, cx)
-                .expect("the window background must apply");
-            if let Some(corner_radius) = corner_radius {
-                crate::native_views::configure_window_corner_radius(
-                    gpui_window,
-                    corner_radius,
-                    mtm,
-                    cx,
-                )
-                .expect("the window corner radius must apply");
-            }
-            let content = cx.new(build_root);
-            cx.new(|_| crate::NativeRoot::new(content))
-        })
-        .expect("the window must open");
+        window.open(cx, build_root).expect("the window must open");
         cx.activate(true);
     });
 }

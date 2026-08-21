@@ -47,6 +47,7 @@ pub(crate) fn is_initialized(cx: &App) -> bool {
 pub(crate) fn configure_window_background(
     window: &Window,
     background: WindowBackground,
+    corner_radius: Option<f32>,
     mtm: MainThreadMarker,
     cx: &mut App,
 ) -> Result<(), String> {
@@ -55,17 +56,7 @@ pub(crate) fn configure_window_background(
     cx.global_mut::<NativeViewRegistry>()
         .native
         .window_backgrounds
-        .configure(window_id, window, background, mtm)
-}
-
-pub(crate) fn configure_window_corner_radius(
-    window: &Window,
-    corner_radius: f32,
-    mtm: MainThreadMarker,
-    cx: &App,
-) -> Result<(), String> {
-    crate::lifecycle::assert_installed(cx);
-    crate::platform::mac::window::configure_corner_radius(window, corner_radius, mtm)
+        .configure(window_id, window, background, corner_radius, mtm)
 }
 
 pub(crate) fn configure_window_chrome(

@@ -7,4 +7,4 @@ compile_error!("libneo-gpui runs on macOS 26.1 and later");
 pub(crate) mod mac;
 
 #[cfg(target_os = "macos")]
-pub(crate) use mac::{assert_supported_os, chrome};
+pub(crate) use mac::{assert_supported_os, chrome, menu};

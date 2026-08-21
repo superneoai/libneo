@@ -12,6 +12,7 @@
 pub mod glass;
 pub mod layers;
 mod lifecycle;
+pub mod menu;
 mod native_views;
 mod platform;
 pub mod table;

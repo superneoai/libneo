@@ -10,6 +10,7 @@ and uses public AppKit APIs.
 
 - AppKit windows with a transparent title bar or a native toolbar.
 - Caller-defined corner radii for transparent-title-bar windows.
+- AppKit system-color resolution for caller-owned GPUI colors.
 - Window backgrounds with `NSVisualEffectView` materials.
 - Glass effects that take their position from GPUI layout.
 - Native text tables with the system scroll edge effect.
@@ -105,6 +106,15 @@ fn main() {
 additional window. Installation does not initialize GPUI colors or application
 theme state; the consumer owns both.
 
+Use `appearance::resolve_system_color` to obtain a concrete `Rgba` for a
+caller-selected AppKit `SystemColor` and `Appearance`. Resolution deliberately
+uses Aqua and Dark Aqua rather than the vibrant appearances. GPUI does not
+participate in AppKit vibrancy, so drawing a vibrant color directly would use a
+value pre-compensated for a blend that never occurs and would reduce contrast.
+Keep the subscription from `appearance::observe_effective_appearance` and
+re-resolve the colors used by that window when its callback runs. The same
+module reports the current Reduce Transparency and Reduce Motion settings.
+
 Install a menu bar after libneo initialization. Standard constructors supply the
 macOS application, Window, and Help menu structure; custom menus and submenus
 use the same compact builders. Menu commands and shortcuts dispatch GPUI
@@ -198,7 +208,9 @@ Run `cargo run -p libneo-gpui --example window_corners` to inspect the fixed
 radius with a standard background, append `-- visual-effect` for a native
 material background, or append `-- toolbar` for a unified native toolbar. Run
 `cargo run -p libneo-gpui --example toolbar -- empty` (or `declared`) to inspect
-the toolbar conformance example.
+the toolbar conformance example. Run
+`cargo run -p libneo-gpui --example system_colors` to resolve sample system
+colors in both supported appearances and report the accessibility settings.
 
 ## Build
 

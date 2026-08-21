@@ -2,11 +2,11 @@
 
 use std::collections::{HashMap, HashSet};
 
-use gpui::{Rgba, Window, WindowId};
+use gpui::{Window, WindowId};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSGlassEffectContainerView, NSGlassEffectView,
+    NSAutoresizingMaskOptions, NSGlassEffectContainerView, NSGlassEffectView,
     NSGlassEffectViewStyle, NSTextField, NSView, NSWindowOrderingMode,
 };
 use objc2_foundation::{NSPoint, NSRect, NSString};
@@ -307,7 +307,7 @@ impl NativeGlassEffect {
             GlassEffectStyle::Clear => NSGlassEffectViewStyle::Clear,
         });
         view.setCornerRadius(f64::from(configuration.corner_radius));
-        let tint = configuration.tint.map(ns_color);
+        let tint = configuration.tint.map(super::color::rgba_to_ns_color);
         view.setTintColor(tint.as_deref());
 
         let content = configuration.content.as_ref().map(|content| match content {
@@ -350,15 +350,6 @@ impl Drop for NativeGlassEffect {
         );
         self.view.removeFromSuperview();
     }
-}
-
-fn ns_color(color: Rgba) -> Retained<NSColor> {
-    NSColor::colorWithSRGBRed_green_blue_alpha(
-        color.r.into(),
-        color.g.into(),
-        color.b.into(),
-        color.a.into(),
-    )
 }
 
 fn local_bounds(frame: NSRect) -> NSRect {

@@ -2,12 +2,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use gpui::{FontWeight, Rgba, Window, WindowId};
+use gpui::{FontWeight, Window, WindowId};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSColor, NSControlTextEditingDelegate, NSFont, NSScrollView, NSTableColumn, NSTableView,
+    NSControlTextEditingDelegate, NSFont, NSScrollView, NSTableColumn, NSTableView,
     NSTableViewDataSource, NSTableViewDelegate, NSTableViewStyle, NSTextField, NSView,
     NSWindowOrderingMode,
 };
@@ -59,8 +59,10 @@ define_class!(
                 let text = NSString::from_str(&row.text);
                 let label = NSTextField::labelWithString(&text, mtm);
                 label.setDrawsBackground(true);
-                label.setBackgroundColor(Some(&ns_color(row.background_color)));
-                label.setTextColor(Some(&ns_color(row.foreground_color)));
+                label.setBackgroundColor(Some(&super::color::rgba_to_ns_color(
+                    row.background_color,
+                )));
+                label.setTextColor(Some(&super::color::rgba_to_ns_color(row.foreground_color)));
                 label.setFont(Some(&NSFont::systemFontOfSize_weight(
                     positive_dimension(f64::from(configuration.font_size)),
                     appkit_font_weight(configuration.font_weight),
@@ -266,15 +268,6 @@ impl Drop for NativeTextTable {
         );
         self.scroll_view.removeFromSuperview();
     }
-}
-
-fn ns_color(color: Rgba) -> Retained<NSColor> {
-    NSColor::colorWithSRGBRed_green_blue_alpha(
-        color.r.into(),
-        color.g.into(),
-        color.b.into(),
-        color.a.into(),
-    )
 }
 
 fn positive_dimension(value: f64) -> f64 {

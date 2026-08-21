@@ -8,6 +8,10 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Caller-selected AppKit system-color resolution through the GPUI facade.
+
 ### Changed
 
 - `WindowBuilder::new` now requires a caller-supplied window corner radius.

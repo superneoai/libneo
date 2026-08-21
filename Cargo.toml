@@ -5,7 +5,11 @@ members = [
   "tests/workspace-checks",
   "vendor/ztracing",
 ]
-exclude = ["vendor/block"]
+exclude = [
+  "vendor/block",
+  "vendor/gpui-shared-string",
+  "vendor/gpui-util",
+]
 resolver = "3"
 
 [workspace.package]
@@ -17,8 +21,10 @@ repository = "https://github.com/superneoai/libneo"
 license = "MIT OR Apache-2.0"
 publish = false
 
-# Replace GPUI's `ztracing` package with the permissive compatibility crate.
+# Replace GPUI helpers with permissive compatibility crates.
 [patch."https://github.com/zed-industries/zed"]
+gpui_shared_string = { path = "vendor/gpui-shared-string" }
+gpui_util = { path = "vendor/gpui-util" }
 ztracing = { path = "vendor/ztracing" }
 
 # Use the crates.io font-kit package required by the pinned Zed revision.

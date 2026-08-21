@@ -72,11 +72,16 @@ impl NativeVisualEffectBackground {
             .ok_or("the window content view must exist")?;
         let view =
             NSVisualEffectView::initWithFrame(NSVisualEffectView::alloc(mtm), content.frame());
-        if let WindowBackground::VisualEffect(material) = background {
-            view.setMaterial(appkit_material(material));
+        match background {
+            WindowBackground::Standard => {
+                view.setBlendingMode(NSVisualEffectBlendingMode::WithinWindow);
+            }
+            WindowBackground::VisualEffect(material) => {
+                view.setMaterial(appkit_material(material));
+                view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
+                view.setState(NSVisualEffectState::Active);
+            }
         }
-        view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
-        view.setState(NSVisualEffectState::Active);
         view.setAutoresizingMask(
             NSAutoresizingMaskOptions::ViewWidthSizable
                 | NSAutoresizingMaskOptions::ViewHeightSizable,

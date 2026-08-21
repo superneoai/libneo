@@ -1,11 +1,12 @@
-//! Native glass effects.
+//! Native glass effects that host GPUI content.
 //!
-//! A glass effect takes its position from GPUI layout, and AppKit draws it
-//! above the GPUI content. [`GlassEffectContent`] puts native views on the glass effect.
+//! A glass effect takes its position from GPUI layout. Its children use normal
+//! GPUI layout, painting, and input handling while AppKit draws the glass below
+//! the shared GPUI host.
 
 use gpui::{
-    App, Bounds, Element, ElementId, GlobalElementId, InspectorElementId, IntoElement, LayoutId,
-    Pixels, Refineable, Rgba, Style, StyleRefinement, Styled, Window,
+    AnyElement, App, Bounds, Element, ElementId, GlobalElementId, InspectorElementId, IntoElement,
+    LayoutId, ParentElement, Pixels, Refineable, Rgba, Style, StyleRefinement, Styled, Window,
 };
 
 /// Selects the glass effect style.
@@ -40,14 +41,7 @@ impl GlassEffectGroup {
     }
 }
 
-/// Selects the native content of a glass effect.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum GlassEffectContent {
-    /// Shows a static text label.
-    Label(String),
-}
-
-/// Configures a native glass effect's presentation and content.
+/// Configures a native glass effect's presentation.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlassEffectConfiguration {
     /// Selects the AppKit glass style.
@@ -58,11 +52,12 @@ pub struct GlassEffectConfiguration {
     pub tint: Option<Rgba>,
     /// Joins a glass effect group, or leaves the effect ungrouped.
     pub group: Option<GlassEffectGroup>,
-    /// Supplies native content, or leaves the effect empty.
-    pub content: Option<GlassEffectContent>,
 }
 
-/// Places a native `NSGlassEffectView` in GPUI layout.
+/// Places a native `NSGlassEffectView` behind GPUI children in normal layout.
+///
+/// Add arbitrary GPUI children with [`ParentElement::child`]. The children paint
+/// above the glass and retain normal GPUI hit testing and input behavior.
 ///
 /// # Panics
 ///
@@ -73,14 +68,16 @@ pub struct GlassEffect {
     id: String,
     configuration: GlassEffectConfiguration,
     style: StyleRefinement,
+    children: Vec<AnyElement>,
 }
 
-/// Creates a glass effect with caller-supplied presentation and content.
+/// Creates a glass effect with caller-supplied presentation.
 pub fn glass_effect(id: impl Into<String>, configuration: GlassEffectConfiguration) -> GlassEffect {
     GlassEffect {
         id: id.into(),
         configuration,
         style: StyleRefinement::default(),
+        children: Vec::new(),
     }
 }
 
@@ -108,11 +105,11 @@ impl GlassEffect {
         self.configuration.group = Some(group);
         self
     }
+}
 
-    /// Sets the native content of the glass effect.
-    pub fn content(mut self, content: GlassEffectContent) -> Self {
-        self.configuration.content = Some(content);
-        self
+impl ParentElement for GlassEffect {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.children.extend(elements);
     }
 }
 
@@ -149,9 +146,14 @@ impl Element for GlassEffect {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, Self::RequestLayoutState) {
+        let child_layout_ids = self
+            .children
+            .iter_mut()
+            .map(|child| child.request_layout(window, cx))
+            .collect::<Vec<_>>();
         let mut style = Style::default();
         style.refine(&self.style);
-        let layout_id = window.request_layout(style.clone(), [], cx);
+        let layout_id = window.request_layout(style.clone(), child_layout_ids.iter().copied(), cx);
         (layout_id, style)
     }
 
@@ -161,9 +163,12 @@ impl Element for GlassEffect {
         _inspector_id: Option<&InspectorElementId>,
         _bounds: Bounds<Pixels>,
         _request_layout: &mut Self::RequestLayoutState,
-        _window: &mut Window,
-        _cx: &mut App,
+        window: &mut Window,
+        cx: &mut App,
     ) {
+        for child in &mut self.children {
+            child.prepaint(window, cx);
+        }
     }
 
     fn paint(
@@ -192,6 +197,10 @@ impl Element for GlassEffect {
             cx,
         )
         .unwrap_or_else(|error| panic!("the glass effect must apply: {error}"));
+
+        for child in &mut self.children {
+            child.paint(window, cx);
+        }
     }
 }
 

@@ -12,7 +12,7 @@ and uses public AppKit APIs.
 - Caller-defined corner radii for transparent-title-bar windows.
 - AppKit system-color resolution for caller-owned GPUI colors.
 - Window backgrounds with `NSVisualEffectView` materials.
-- Glass effects that take their position from GPUI layout.
+- Glass effects that host interactive GPUI content in normal layout.
 - Native text tables with the system scroll edge effect.
 - Native application, Window, and Help menus backed by GPUI actions.
 - Overlay placement.

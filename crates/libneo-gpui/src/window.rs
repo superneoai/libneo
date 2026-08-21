@@ -4,6 +4,8 @@ use gpui::{
     App, AppContext, Size, TitlebarOptions, WindowBounds, WindowKind, WindowOptions, point, size,
 };
 
+use crate::toolbar::Toolbar;
+
 pub use gpui::colors::DefaultColors;
 pub use gpui::{
     Context, IntoElement, ParentElement, Render, Rgba, Styled, Window, WindowBackgroundAppearance,
@@ -64,18 +66,20 @@ pub struct WindowBuilder {
     background_appearance: WindowBackgroundAppearance,
     background: WindowBackground,
     chrome: WindowChrome,
+    toolbar: Option<Toolbar>,
 }
 
 impl Default for WindowBuilder {
     fn default() -> Self {
         Self {
-            title: "neo".to_owned(),
+            title: "Application".to_owned(),
             size: DEFAULT_SIZE,
             minimum_size: DEFAULT_MINIMUM_SIZE,
             window_controls_position: DEFAULT_WINDOW_CONTROLS_POSITION,
             background_appearance: WindowBackgroundAppearance::Opaque,
             background: WindowBackground::Standard,
             chrome: WindowChrome::TransparentTitleBar,
+            toolbar: None,
         }
     }
 }
@@ -129,6 +133,17 @@ impl WindowBuilder {
         self
     }
 
+    /// Shows the supplied native toolbar.
+    ///
+    /// An empty toolbar displays no items. When this method is not called,
+    /// [`WindowChrome::Toolbar`] uses an empty toolbar whose identifier is
+    /// derived from the window title.
+    pub fn toolbar(mut self, toolbar: Toolbar) -> Self {
+        self.chrome = WindowChrome::Toolbar;
+        self.toolbar = Some(toolbar);
+        self
+    }
+
     fn window_options(&self, cx: &App) -> WindowOptions {
         let window_size = size(px(self.size.0), px(self.size.1));
         let minimum_size: Size<_> = size(px(self.minimum_size.0), px(self.minimum_size.1));
@@ -172,10 +187,15 @@ where
         let options = window.window_options(cx);
         let background = window.background;
         let chrome = window.chrome;
+        let toolbar = matches!(chrome, WindowChrome::Toolbar).then(|| {
+            window
+                .toolbar
+                .unwrap_or_else(|| Toolbar::new(format!("{}.toolbar", window.title)))
+        });
 
         cx.open_window(options, move |gpui_window, cx| {
             let mtm = crate::lifecycle::main_thread_marker(cx);
-            crate::native_views::configure_window_chrome(gpui_window, chrome, mtm, cx)
+            crate::native_views::configure_window_chrome(gpui_window, chrome, toolbar, mtm, cx)
                 .expect("the window chrome must apply");
             crate::native_views::configure_window_background(gpui_window, background, mtm, cx)
                 .expect("the window background must apply");

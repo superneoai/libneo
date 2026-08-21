@@ -26,7 +26,7 @@ define_class!(
     /// Supplies owned static rows to the virtualized table on the main thread.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "NeoTableSource"]
+    #[name = "LNGpuiTableSource"]
     #[ivars = TableSourceIvars]
     #[derive(Debug)]
     pub(crate) struct TableSource;
@@ -198,7 +198,7 @@ impl NativeTextTable {
         let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), table_frame);
         let column = NSTableColumn::initWithIdentifier(
             NSTableColumn::alloc(mtm),
-            &NSString::from_str("neo.column"),
+            &NSString::from_str("LN.GPUI.TableColumn"),
         );
         column.setWidth(table_frame.size.width);
         table.addTableColumn(&column);

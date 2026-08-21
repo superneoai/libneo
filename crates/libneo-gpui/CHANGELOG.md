@@ -14,5 +14,7 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Glass effects with grouping and native content.
 - Native text tables.
 - Themes that follow the system appearance.
-- Application menu bars with GPUI actions, shortcuts, state, submenus, and macOS standard menus.
+- Application menu bars with GPUI actions, shortcuts, state, submenus, and
+  macOS standard menus.
+- Caller-defined native toolbars with GPUI actions and AppKit system items.
 - Overlay placement.

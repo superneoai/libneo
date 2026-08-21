@@ -119,6 +119,29 @@ Register a handler for `libneo::menu::Settings` when the application has a
 settings interface. Without a handler, GPUI leaves the standard Settings item
 visible but unavailable.
 
+Build native toolbars from caller-owned identifiers, labels, SF Symbols, and
+GPUI actions. System items cover spacing and standard AppKit commands. An empty
+item list produces an empty toolbar.
+
+```rust
+use libneo::toolbar::{Toolbar, ToolbarItem, ToolbarSystemItem};
+use libneo::window::WindowBuilder;
+
+let window = WindowBuilder::new().toolbar(
+    Toolbar::new("example.main-toolbar").items([
+        ToolbarItem::action("example.search", "Search", Search)
+            .symbol("magnifyingglass"),
+        ToolbarItem::system(ToolbarSystemItem::FlexibleSpace),
+    ]),
+);
+```
+
+Toolbar action availability follows the focused GPUI dispatch path. Use
+`ToolbarItem::enabled(false)` for an explicitly unavailable item.
+
+Run `cargo run -p libneo-gpui --example toolbar -- empty` or replace `empty`
+with `declared` to inspect the conformance example.
+
 ## Build
 
 ```sh

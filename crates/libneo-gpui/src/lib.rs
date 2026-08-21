@@ -17,6 +17,7 @@ mod native_views;
 mod platform;
 pub mod table;
 pub mod theme;
+pub mod toolbar;
 pub mod window;
 
 pub use lifecycle::{NativeRoot, install};

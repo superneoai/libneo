@@ -1,36 +1,43 @@
 //! Builds the native window chrome.
 
-use gpui::Window;
+use gpui::{AsyncApp, Window};
 use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
+use objc2::runtime::{Bool, ProtocolObject};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSImage, NSSplitViewController, NSSplitViewItem, NSToolbar,
-    NSToolbarDelegate, NSToolbarDisplayMode, NSToolbarItem, NSToolbarItemIdentifier, NSView,
-    NSViewController, NSWindowStyleMask, NSWindowToolbarStyle,
+    NSToolbarDelegate, NSToolbarDisplayMode, NSToolbarFlexibleSpaceItemIdentifier, NSToolbarItem,
+    NSToolbarItemIdentifier, NSToolbarItemValidation, NSToolbarPrintItemIdentifier,
+    NSToolbarSpaceItemIdentifier, NSToolbarToggleInspectorItemIdentifier,
+    NSToolbarToggleSidebarItemIdentifier, NSView, NSViewController, NSWindowStyleMask,
+    NSWindowToolbarStyle,
 };
 use objc2_foundation::{NSArray, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
+use crate::toolbar::{Toolbar, ToolbarItemKind, ToolbarSystemItem};
 use crate::window::WindowChrome;
 
 use super::handle::NativeWindowHandle;
 
-/// Pairs each toolbar item identifier with its symbol name.
-const ITEM_SYMBOLS: [(&str, &str); 2] = [
-    ("neo.sidebar", "sidebar.leading"),
-    ("neo.search", "magnifyingglass"),
-];
+pub(crate) struct ToolbarDelegateIvars {
+    toolbar: Toolbar,
+    cx: AsyncApp,
+}
 
-/// Identifies the flexible space between the toolbar items.
-const FLEXIBLE_SPACE: &str = "NSToolbarFlexibleSpaceItem";
-
-/// Identifies the toolbar of the application window.
-const TOOLBAR_IDENTIFIER: &str = "neo.toolbar";
+impl std::fmt::Debug for ToolbarDelegateIvars {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ToolbarDelegateIvars")
+            .field("toolbar", &self.toolbar)
+            .finish_non_exhaustive()
+    }
+}
 
 define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "NeoToolbarDelegate"]
+    #[name = "LNGpuiToolbarDelegate"]
+    #[ivars = ToolbarDelegateIvars]
     #[derive(Debug)]
     pub(crate) struct ToolbarDelegate;
 
@@ -39,12 +46,12 @@ define_class!(
     unsafe impl NSToolbarDelegate for ToolbarDelegate {
         #[unsafe(method_id(toolbarDefaultItemIdentifiers:))]
         fn default_identifiers(&self, _toolbar: &NSToolbar) -> Retained<NSArray<NSString>> {
-            identifiers()
+            identifiers(&self.ivars().toolbar)
         }
 
         #[unsafe(method_id(toolbarAllowedItemIdentifiers:))]
         fn allowed_identifiers(&self, _toolbar: &NSToolbar) -> Retained<NSArray<NSString>> {
-            identifiers()
+            identifiers(&self.ivars().toolbar)
         }
 
         #[unsafe(method_id(toolbar:itemForItemIdentifier:willBeInsertedIntoToolbar:))]
@@ -54,37 +61,128 @@ define_class!(
             identifier: &NSToolbarItemIdentifier,
             _inserted: bool,
         ) -> Option<Retained<NSToolbarItem>> {
-            make_item(identifier, MainThreadMarker::from(self))
+            make_item(self, identifier, MainThreadMarker::from(self))
+        }
+    }
+
+    unsafe impl NSToolbarItemValidation for ToolbarDelegate {
+        #[unsafe(method(validateToolbarItem:))]
+        fn validate_toolbar_item(&self, item: &NSToolbarItem) -> Bool {
+            let identifier = item.itemIdentifier().to_string();
+            let Some((enabled, action)) = action_for_identifier(&self.ivars().toolbar, &identifier)
+            else {
+                return true.into();
+            };
+            (enabled && self.ivars().cx.update(|cx| cx.is_action_available(action))).into()
+        }
+    }
+
+    impl ToolbarDelegate {
+        #[unsafe(method(performToolbarAction:))]
+        fn perform_toolbar_action(&self, sender: &NSToolbarItem) {
+            let identifier = sender.itemIdentifier().to_string();
+            let Some((true, action)) = action_for_identifier(&self.ivars().toolbar, &identifier)
+            else {
+                return;
+            };
+            let action = action.boxed_clone();
+            self.ivars().cx.update(|cx| cx.dispatch_action(&*action));
         }
     }
 );
 
-fn identifiers() -> Retained<NSArray<NSString>> {
-    let names: Vec<Retained<NSString>> = vec![
-        NSString::from_str(ITEM_SYMBOLS[0].0),
-        NSString::from_str(FLEXIBLE_SPACE),
-        NSString::from_str(ITEM_SYMBOLS[1].0),
-    ];
-    let refs: Vec<&NSString> = names.iter().map(|name| &**name).collect();
-    NSArray::from_slice(&refs)
+impl ToolbarDelegate {
+    fn new(toolbar: Toolbar, cx: AsyncApp, mtm: MainThreadMarker) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(ToolbarDelegateIvars { toolbar, cx });
+        // SAFETY: the ivars are initialized before NSObject initialization.
+        unsafe { msg_send![super(this), init] }
+    }
+}
+
+fn identifiers(toolbar: &Toolbar) -> Retained<NSArray<NSString>> {
+    let names = toolbar
+        .items
+        .iter()
+        .map(|item| match &item.kind {
+            ToolbarItemKind::Action { identifier, .. } => identifier.clone(),
+            ToolbarItemKind::System(item) => system_identifier(*item).to_string(),
+        })
+        .map(|identifier| NSString::from_str(&identifier))
+        .collect::<Vec<_>>();
+    let names = names.iter().map(|name| &**name).collect::<Vec<_>>();
+    NSArray::from_slice(&names)
+}
+
+fn system_identifier(item: ToolbarSystemItem) -> &'static NSToolbarItemIdentifier {
+    // SAFETY: AppKit defines these immutable process-lifetime identifiers.
+    unsafe {
+        match item {
+            ToolbarSystemItem::FlexibleSpace => NSToolbarFlexibleSpaceItemIdentifier,
+            ToolbarSystemItem::Space => NSToolbarSpaceItemIdentifier,
+            ToolbarSystemItem::ToggleSidebar => NSToolbarToggleSidebarItemIdentifier,
+            ToolbarSystemItem::ToggleInspector => NSToolbarToggleInspectorItemIdentifier,
+            ToolbarSystemItem::Print => NSToolbarPrintItemIdentifier,
+        }
+    }
+}
+
+fn action_for_identifier<'a>(
+    toolbar: &'a Toolbar,
+    identifier: &str,
+) -> Option<(bool, &'a dyn gpui::Action)> {
+    toolbar.items.iter().find_map(|item| match &item.kind {
+        ToolbarItemKind::Action {
+            identifier: current,
+            action,
+            enabled,
+            ..
+        } if current == identifier => Some((*enabled, &**action)),
+        ToolbarItemKind::Action { .. } | ToolbarItemKind::System(_) => None,
+    })
 }
 
 fn make_item(
+    delegate: &ToolbarDelegate,
     identifier: &NSToolbarItemIdentifier,
     mtm: MainThreadMarker,
 ) -> Option<Retained<NSToolbarItem>> {
-    let name = identifier.to_string();
-    let symbol = ITEM_SYMBOLS
-        .iter()
-        .find(|(item, _)| *item == name)
-        .map(|(_, symbol)| *symbol)?;
+    let identifier_text = identifier.to_string();
+    let item_definition =
+        delegate
+            .ivars()
+            .toolbar
+            .items
+            .iter()
+            .find_map(|item| match &item.kind {
+                ToolbarItemKind::Action {
+                    identifier,
+                    label,
+                    symbol,
+                    enabled,
+                    ..
+                } if identifier == &identifier_text => Some((label, symbol.as_deref(), *enabled)),
+                ToolbarItemKind::Action { .. } | ToolbarItemKind::System(_) => None,
+            })?;
+
     let item = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), identifier);
-    let image = NSImage::imageWithSystemSymbolName_accessibilityDescription(
-        &NSString::from_str(symbol),
-        None,
-    )?;
-    item.setImage(Some(&image));
-    item.setLabel(&NSString::from_str(symbol));
+    let label = NSString::from_str(item_definition.0);
+    item.setLabel(&label);
+    item.setPaletteLabel(&label);
+    item.setToolTip(Some(&label));
+    if let Some(symbol) = item_definition.1
+        && let Some(image) = NSImage::imageWithSystemSymbolName_accessibilityDescription(
+            &NSString::from_str(symbol),
+            Some(&label),
+        )
+    {
+        item.setImage(Some(&image));
+    }
+    item.setEnabled(item_definition.2);
+    // SAFETY: the delegate implements the selector and outlives every item.
+    unsafe {
+        item.setTarget(Some(delegate));
+        item.setAction(Some(sel!(performToolbarAction:)));
+    }
     Some(item)
 }
 
@@ -98,11 +196,14 @@ pub(crate) struct NativeWindowChrome {
 pub(crate) fn configure(
     gpui_window: &Window,
     chrome: WindowChrome,
+    toolbar: Option<Toolbar>,
     mtm: MainThreadMarker,
+    cx: AsyncApp,
 ) -> Result<Option<NativeWindowChrome>, String> {
     let WindowChrome::Toolbar = chrome else {
         return Ok(None);
     };
+    let toolbar_configuration = toolbar.expect("toolbar chrome must have a configuration");
     let handle = NativeWindowHandle::acquire(gpui_window, mtm)?;
     let window = handle.window();
 
@@ -111,16 +212,11 @@ pub(crate) fn configure(
     window.setStyleMask(window.styleMask() | NSWindowStyleMask::FullSizeContentView);
     host_content(&handle, mtm);
 
-    // SAFETY: the delegate is allocated on the main thread, has no ivars, and
-    // uses NSObject's designated initializer.
-    let delegate: Retained<ToolbarDelegate> =
-        unsafe { msg_send![ToolbarDelegate::alloc(mtm), init] };
-    let toolbar = NSToolbar::initWithIdentifier(
-        NSToolbar::alloc(mtm),
-        &NSString::from_str(TOOLBAR_IDENTIFIER),
-    );
+    let identifier = NSString::from_str(&toolbar_configuration.identifier);
+    let delegate = ToolbarDelegate::new(toolbar_configuration, cx, mtm);
+    let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), &identifier);
     toolbar.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-    toolbar.setDisplayMode(NSToolbarDisplayMode::IconOnly);
+    toolbar.setDisplayMode(NSToolbarDisplayMode::Default);
     toolbar.setAutosavesConfiguration(false);
     toolbar.setAllowsUserCustomization(false);
 

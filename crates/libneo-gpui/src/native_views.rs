@@ -14,6 +14,7 @@ use crate::platform::mac::glass::NativeGlassEffectRegistry;
 use crate::platform::mac::table::NativeTextTableRegistry;
 use crate::platform::mac::visual_effect::NativeWindowBackgroundRegistry;
 use crate::table::TextTableFrame;
+use crate::toolbar::Toolbar;
 use crate::window::{WindowBackground, WindowChrome};
 
 #[derive(Default)]
@@ -61,14 +62,18 @@ pub(crate) fn configure_window_background(
 pub(crate) fn configure_window_chrome(
     window: &Window,
     chrome: WindowChrome,
+    toolbar: Option<Toolbar>,
     mtm: MainThreadMarker,
     cx: &mut App,
 ) -> Result<(), String> {
     crate::lifecycle::assert_installed(cx);
     let window_id = window.window_handle().window_id();
+    let async_cx = cx.to_async();
     let registry = cx.global_mut::<NativeViewRegistry>();
     registry.native.chrome.remove(&window_id);
-    if let Some(native) = crate::platform::chrome::configure(window, chrome, mtm)? {
+    if let Some(native) =
+        crate::platform::chrome::configure(window, chrome, toolbar, mtm, async_cx)?
+    {
         registry.native.chrome.insert(window_id, native);
     }
     Ok(())

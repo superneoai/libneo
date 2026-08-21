@@ -10,6 +10,7 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `WindowBuilder::new` now requires a caller-supplied window corner radius.
 - The GPUI facade now requires callers to supply every application-owned
   presentation choice.
 

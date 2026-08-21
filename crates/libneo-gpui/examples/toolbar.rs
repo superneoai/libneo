@@ -6,7 +6,8 @@ use libneo_gpui::toolbar::{
     Toolbar, ToolbarConfiguration, ToolbarDisplayMode, ToolbarItem, ToolbarStyle, ToolbarSystemItem,
 };
 use libneo_gpui::window::{
-    WindowBackground, WindowBackgroundAppearance, WindowBuilder, WindowChrome, run,
+    WindowBackground, WindowBackgroundAppearance, WindowBuilder, WindowChrome, WindowCornerRadius,
+    run,
 };
 
 const EMPTY: &str = "empty";
@@ -87,6 +88,7 @@ fn main() {
         (720.0, 440.0),
         (640.0, 320.0),
         (12.0, 12.0),
+        WindowCornerRadius::System,
         WindowChrome::Toolbar(toolbar),
         WindowBackground::Standard,
         WindowBackgroundAppearance::Opaque,

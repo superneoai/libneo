@@ -58,6 +58,16 @@ pub(crate) fn configure_window_background(
         .configure(window_id, window, background, mtm)
 }
 
+pub(crate) fn configure_window_corner_radius(
+    window: &Window,
+    corner_radius: f32,
+    mtm: MainThreadMarker,
+    cx: &App,
+) -> Result<(), String> {
+    crate::lifecycle::assert_installed(cx);
+    crate::platform::mac::window::configure_corner_radius(window, corner_radius, mtm)
+}
+
 pub(crate) fn configure_window_chrome(
     window: &Window,
     chrome: WindowChrome,

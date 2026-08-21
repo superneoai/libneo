@@ -14,7 +14,9 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
-use crate::toolbar::{Toolbar, ToolbarItemKind, ToolbarSystemItem};
+use crate::toolbar::{
+    Toolbar, ToolbarDisplayMode, ToolbarItemKind, ToolbarStyle, ToolbarSystemItem,
+};
 use crate::window::WindowChrome;
 
 use super::handle::NativeWindowHandle;
@@ -196,14 +198,12 @@ pub(crate) struct NativeWindowChrome {
 pub(crate) fn configure(
     gpui_window: &Window,
     chrome: WindowChrome,
-    toolbar: Option<Toolbar>,
     mtm: MainThreadMarker,
     cx: AsyncApp,
 ) -> Result<Option<NativeWindowChrome>, String> {
-    let WindowChrome::Toolbar = chrome else {
+    let WindowChrome::Toolbar(toolbar_configuration) = chrome else {
         return Ok(None);
     };
-    let toolbar_configuration = toolbar.expect("toolbar chrome must have a configuration");
     let handle = NativeWindowHandle::acquire(gpui_window, mtm)?;
     let window = handle.window();
 
@@ -213,15 +213,27 @@ pub(crate) fn configure(
     host_content(&handle, mtm);
 
     let identifier = NSString::from_str(&toolbar_configuration.identifier);
+    let configuration = toolbar_configuration.configuration;
     let delegate = ToolbarDelegate::new(toolbar_configuration, cx, mtm);
     let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), &identifier);
     toolbar.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-    toolbar.setDisplayMode(NSToolbarDisplayMode::Default);
-    toolbar.setAutosavesConfiguration(false);
-    toolbar.setAllowsUserCustomization(false);
+    toolbar.setDisplayMode(match configuration.display_mode {
+        ToolbarDisplayMode::System => NSToolbarDisplayMode::Default,
+        ToolbarDisplayMode::IconAndLabel => NSToolbarDisplayMode::IconAndLabel,
+        ToolbarDisplayMode::IconOnly => NSToolbarDisplayMode::IconOnly,
+        ToolbarDisplayMode::LabelOnly => NSToolbarDisplayMode::LabelOnly,
+    });
+    toolbar.setAutosavesConfiguration(configuration.autosaves_configuration);
+    toolbar.setAllowsUserCustomization(configuration.allows_user_customization);
 
     window.setToolbar(Some(&toolbar));
-    window.setToolbarStyle(NSWindowToolbarStyle::Unified);
+    window.setToolbarStyle(match configuration.style {
+        ToolbarStyle::Automatic => NSWindowToolbarStyle::Automatic,
+        ToolbarStyle::Expanded => NSWindowToolbarStyle::Expanded,
+        ToolbarStyle::Preference => NSWindowToolbarStyle::Preference,
+        ToolbarStyle::Unified => NSWindowToolbarStyle::Unified,
+        ToolbarStyle::UnifiedCompact => NSWindowToolbarStyle::UnifiedCompact,
+    });
     // The system color lets the toolbar sample the window content.
     let background = NSColor::windowBackgroundColor();
     window.setBackgroundColor(Some(&background));

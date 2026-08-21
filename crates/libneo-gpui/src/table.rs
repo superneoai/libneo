@@ -12,9 +12,6 @@ use gpui::{
 
 pub use gpui::FontWeight;
 
-const DEFAULT_ROW_HEIGHT: f32 = 44.0;
-const DEFAULT_FONT_SIZE: f32 = 13.0;
-
 /// Defines one static row in a native text table.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NativeTextTableRow {
@@ -49,25 +46,20 @@ impl NativeTextTableRow {
     }
 }
 
+/// Configures the rows, typography, and initial position of a native text
+/// table.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct TextTableConfiguration {
-    pub(crate) rows: Arc<[NativeTextTableRow]>,
-    pub(crate) row_height: Pixels,
-    pub(crate) font_size: Pixels,
-    pub(crate) font_weight: FontWeight,
-    pub(crate) initial_scroll_offset: Pixels,
-}
-
-impl TextTableConfiguration {
-    fn new(rows: Arc<[NativeTextTableRow]>) -> Self {
-        Self {
-            rows,
-            row_height: Pixels::from(DEFAULT_ROW_HEIGHT),
-            font_size: Pixels::from(DEFAULT_FONT_SIZE),
-            font_weight: FontWeight::NORMAL,
-            initial_scroll_offset: Pixels::from(0.0),
-        }
-    }
+pub struct TextTableConfiguration {
+    /// Supplies the table's static rows.
+    pub rows: Arc<[NativeTextTableRow]>,
+    /// Sets the height of each row in logical pixels.
+    pub row_height: Pixels,
+    /// Sets the row text size in logical pixels.
+    pub font_size: Pixels,
+    /// Sets the GPUI font weight used for all rows.
+    pub font_weight: FontWeight,
+    /// Sets the exact initial vertical scroll offset in logical pixels.
+    pub initial_scroll_offset: Pixels,
 }
 
 /// Places a native, virtualized text table in GPUI layout.
@@ -88,14 +80,15 @@ pub struct NativeTextTable {
     style: StyleRefinement,
 }
 
-/// Creates a native text table with static rows.
+/// Creates a native text table with caller-supplied rows, typography, and
+/// initial position.
 pub fn native_text_table(
     id: impl Into<String>,
-    rows: impl Into<Arc<[NativeTextTableRow]>>,
+    configuration: TextTableConfiguration,
 ) -> NativeTextTable {
     NativeTextTable {
         id: id.into(),
-        configuration: TextTableConfiguration::new(rows.into()),
+        configuration,
         style: StyleRefinement::default(),
     }
 }
@@ -220,7 +213,7 @@ mod tests {
 
     use gpui::{FontWeight, px, rgba};
 
-    use super::{NativeTextTableRow, native_text_table};
+    use super::{NativeTextTableRow, TextTableConfiguration, native_text_table};
 
     #[test]
     fn text_row_keeps_caller_content_and_colors() {
@@ -239,11 +232,16 @@ mod tests {
             NativeTextTableRow::new("One", rgba(0x112233ff), rgba(0xffffffff)),
             NativeTextTableRow::new("Two", rgba(0x445566ff), rgba(0x000000ff)),
         ]);
-        let table = native_text_table("content", rows.clone())
-            .row_height(px(56.0))
-            .font_size(px(22.0))
-            .font_weight(FontWeight::SEMIBOLD)
-            .initial_scroll_offset(px(4480.5));
+        let table = native_text_table(
+            "content",
+            TextTableConfiguration {
+                rows: rows.clone(),
+                row_height: px(56.0),
+                font_size: px(22.0),
+                font_weight: FontWeight::SEMIBOLD,
+                initial_scroll_offset: px(4480.5),
+            },
+        );
 
         assert_eq!(table.id, "content");
         assert_eq!(table.configuration.rows, rows);

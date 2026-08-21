@@ -12,7 +12,6 @@ and uses public AppKit APIs.
 - Window backgrounds with `NSVisualEffectView` materials.
 - Glass effects that take their position from GPUI layout.
 - Native text tables with the system scroll edge effect.
-- Themes that follow the system appearance.
 - Native application, Window, and Help menus backed by GPUI actions.
 - Overlay placement.
 
@@ -100,7 +99,8 @@ fn main() {
 }
 ```
 
-`libneo::window::run` uses this same lifecycle automatically.
+`libneo::window::run` uses this same lifecycle automatically. Installation does
+not initialize GPUI colors or application theme state; the consumer owns both.
 
 Install a menu bar after libneo initialization. Standard constructors supply the
 macOS application, Window, and Help menu structure; custom menus and submenus
@@ -119,20 +119,43 @@ Register a handler for `libneo::menu::Settings` when the application has a
 settings interface. Without a handler, GPUI leaves the standard Settings item
 visible but unavailable.
 
-Build native toolbars from caller-owned identifiers, labels, SF Symbols, and
-GPUI actions. System items cover spacing and standard AppKit commands. An empty
-item list produces an empty toolbar.
+Build native toolbars from caller-owned identifiers, presentation, labels, SF
+Symbols, and GPUI actions. System items cover spacing and standard AppKit
+commands. An empty item list produces an empty toolbar. Window construction
+requires every presentation choice; no title, dimensions, control position,
+chrome, or background is inferred.
 
 ```rust
-use libneo::toolbar::{Toolbar, ToolbarItem, ToolbarSystemItem};
-use libneo::window::WindowBuilder;
+use libneo::toolbar::{
+    Toolbar, ToolbarConfiguration, ToolbarDisplayMode, ToolbarItem,
+    ToolbarStyle, ToolbarSystemItem,
+};
+use libneo::window::{
+    WindowBackground, WindowBackgroundAppearance, WindowBuilder, WindowChrome,
+};
 
-let window = WindowBuilder::new().toolbar(
-    Toolbar::new("example.main-toolbar").items([
-        ToolbarItem::action("example.search", "Search", Search)
-            .symbol("magnifyingglass"),
-        ToolbarItem::system(ToolbarSystemItem::FlexibleSpace),
-    ]),
+let toolbar = Toolbar::new(
+    "example.main-toolbar",
+    ToolbarConfiguration {
+        display_mode: ToolbarDisplayMode::IconAndLabel,
+        style: ToolbarStyle::Unified,
+        autosaves_configuration: false,
+        allows_user_customization: false,
+    },
+)
+.items([
+    ToolbarItem::action("example.search", "Search", Search)
+        .symbol("magnifyingglass"),
+    ToolbarItem::system(ToolbarSystemItem::FlexibleSpace),
+]);
+let window = WindowBuilder::new(
+    "Example",
+    (960.0, 640.0),
+    (640.0, 480.0),
+    (12.0, 12.0),
+    WindowChrome::Toolbar(toolbar),
+    WindowBackground::Standard,
+    WindowBackgroundAppearance::Opaque,
 );
 ```
 

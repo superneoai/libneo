@@ -6,51 +6,43 @@ use gpui::{
 
 use crate::toolbar::Toolbar;
 
-pub use gpui::colors::DefaultColors;
 pub use gpui::{
     Context, IntoElement, ParentElement, Render, Rgba, Styled, Window, WindowBackgroundAppearance,
     div, px, rgba,
 };
 
-const DEFAULT_SIZE: (f32, f32) = (960.0, 640.0);
-const DEFAULT_MINIMUM_SIZE: (f32, f32) = (640.0, 480.0);
-const DEFAULT_WINDOW_CONTROLS_POSITION: (f32, f32) = (12.0, 12.0);
-
 /// Selects an AppKit `NSVisualEffectMaterial`.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VisualEffectMaterial {
     /// Uses the material for content below the window background.
     UnderWindowBackground,
     /// Uses the heads-up display material.
-    #[default]
     HudWindow,
     /// Uses the sidebar material.
     Sidebar,
 }
 
 /// Selects the window chrome.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum WindowChrome {
     /// Shows a transparent title bar. Content fills the window.
-    #[default]
     TransparentTitleBar,
-    /// Shows a native toolbar in an opaque title bar. Content passes below the
-    /// toolbar material.
-    Toolbar,
+    /// Shows the supplied native toolbar in an opaque title bar. Content passes
+    /// below the toolbar material.
+    Toolbar(Toolbar),
 }
 
 impl WindowChrome {
     /// Returns the title bar transparency.
-    const fn title_bar_is_transparent(self) -> bool {
+    const fn title_bar_is_transparent(&self) -> bool {
         matches!(self, Self::TransparentTitleBar)
     }
 }
 
 /// Selects the window background.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowBackground {
     /// Uses the GPUI window background.
-    #[default]
     Standard,
     /// Shows a native `NSVisualEffectView` material below the GPUI content.
     VisualEffect(VisualEffectMaterial),
@@ -66,28 +58,33 @@ pub struct WindowBuilder {
     background_appearance: WindowBackgroundAppearance,
     background: WindowBackground,
     chrome: WindowChrome,
-    toolbar: Option<Toolbar>,
-}
-
-impl Default for WindowBuilder {
-    fn default() -> Self {
-        Self {
-            title: "Application".to_owned(),
-            size: DEFAULT_SIZE,
-            minimum_size: DEFAULT_MINIMUM_SIZE,
-            window_controls_position: DEFAULT_WINDOW_CONTROLS_POSITION,
-            background_appearance: WindowBackgroundAppearance::Opaque,
-            background: WindowBackground::Standard,
-            chrome: WindowChrome::TransparentTitleBar,
-            toolbar: None,
-        }
-    }
 }
 
 impl WindowBuilder {
-    /// Creates a builder with default values.
-    pub fn new() -> Self {
-        Self::default()
+    /// Creates a builder from caller-supplied window presentation.
+    ///
+    /// The controls position applies only to transparent title bars because
+    /// AppKit positions controls for toolbar chrome. The background appearance
+    /// applies only to standard backgrounds; visual-effect backgrounds require
+    /// a transparent GPUI surface so the AppKit material remains visible.
+    pub fn new(
+        title: impl Into<String>,
+        size: (f32, f32),
+        minimum_size: (f32, f32),
+        window_controls_position: (f32, f32),
+        chrome: WindowChrome,
+        background: WindowBackground,
+        background_appearance: WindowBackgroundAppearance,
+    ) -> Self {
+        Self {
+            title: title.into(),
+            size,
+            minimum_size,
+            window_controls_position,
+            background_appearance,
+            background,
+            chrome,
+        }
     }
 
     /// Sets the window title.
@@ -116,6 +113,9 @@ impl WindowBuilder {
     }
 
     /// Sets the GPUI window background for [`WindowBackground::Standard`].
+    ///
+    /// Visual-effect backgrounds require a transparent GPUI surface so the
+    /// AppKit material remains visible.
     pub fn background_appearance(mut self, appearance: WindowBackgroundAppearance) -> Self {
         self.background_appearance = appearance;
         self
@@ -130,17 +130,6 @@ impl WindowBuilder {
     /// Sets the window chrome.
     pub fn chrome(mut self, chrome: WindowChrome) -> Self {
         self.chrome = chrome;
-        self
-    }
-
-    /// Shows the supplied native toolbar.
-    ///
-    /// An empty toolbar displays no items. When this method is not called,
-    /// [`WindowChrome::Toolbar`] uses an empty toolbar whose identifier is
-    /// derived from the window title.
-    pub fn toolbar(mut self, toolbar: Toolbar) -> Self {
-        self.chrome = WindowChrome::Toolbar;
-        self.toolbar = Some(toolbar);
         self
     }
 
@@ -187,15 +176,10 @@ where
         let options = window.window_options(cx);
         let background = window.background;
         let chrome = window.chrome;
-        let toolbar = matches!(chrome, WindowChrome::Toolbar).then(|| {
-            window
-                .toolbar
-                .unwrap_or_else(|| Toolbar::new(format!("{}.toolbar", window.title)))
-        });
 
         cx.open_window(options, move |gpui_window, cx| {
             let mtm = crate::lifecycle::main_thread_marker(cx);
-            crate::native_views::configure_window_chrome(gpui_window, chrome, toolbar, mtm, cx)
+            crate::native_views::configure_window_chrome(gpui_window, chrome, mtm, cx)
                 .expect("the window chrome must apply");
             crate::native_views::configure_window_background(gpui_window, background, mtm, cx)
                 .expect("the window background must apply");

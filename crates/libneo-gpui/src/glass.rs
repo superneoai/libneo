@@ -9,10 +9,9 @@ use gpui::{
 };
 
 /// Selects the glass effect style.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GlassEffectStyle {
     /// Uses the regular style.
-    #[default]
     Regular,
     /// Uses the clear style.
     Clear,
@@ -26,11 +25,11 @@ pub struct GlassEffectGroup {
 }
 
 impl GlassEffectGroup {
-    /// Creates a group with zero spacing.
-    pub fn new(id: impl Into<String>) -> Self {
+    /// Creates a group with the supplied effect-merging distance.
+    pub fn new(id: impl Into<String>, spacing: Pixels) -> Self {
         Self {
             id: id.into(),
-            spacing: Pixels::from(0.0),
+            spacing,
         }
     }
 
@@ -48,25 +47,19 @@ pub enum GlassEffectContent {
     Label(String),
 }
 
+/// Configures a native glass effect's presentation and content.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GlassEffectConfiguration {
-    pub(crate) style: GlassEffectStyle,
-    pub(crate) corner_radius: Pixels,
-    pub(crate) tint: Option<Rgba>,
-    pub(crate) group: Option<GlassEffectGroup>,
-    pub(crate) content: Option<GlassEffectContent>,
-}
-
-impl Default for GlassEffectConfiguration {
-    fn default() -> Self {
-        Self {
-            style: GlassEffectStyle::Regular,
-            corner_radius: Pixels::from(0.0),
-            tint: None,
-            group: None,
-            content: None,
-        }
-    }
+pub struct GlassEffectConfiguration {
+    /// Selects the AppKit glass style.
+    pub style: GlassEffectStyle,
+    /// Sets the corner radius in logical pixels.
+    pub corner_radius: Pixels,
+    /// Sets a tint color, or leaves the effect untinted.
+    pub tint: Option<Rgba>,
+    /// Joins a glass effect group, or leaves the effect ungrouped.
+    pub group: Option<GlassEffectGroup>,
+    /// Supplies native content, or leaves the effect empty.
+    pub content: Option<GlassEffectContent>,
 }
 
 /// Places a native `NSGlassEffectView` in GPUI layout.
@@ -82,11 +75,11 @@ pub struct GlassEffect {
     style: StyleRefinement,
 }
 
-/// Creates a glass effect with default values.
-pub fn glass_effect(id: impl Into<String>) -> GlassEffect {
+/// Creates a glass effect with caller-supplied presentation and content.
+pub fn glass_effect(id: impl Into<String>, configuration: GlassEffectConfiguration) -> GlassEffect {
     GlassEffect {
         id: id.into(),
-        configuration: GlassEffectConfiguration::default(),
+        configuration,
         style: StyleRefinement::default(),
     }
 }

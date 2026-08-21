@@ -4,7 +4,7 @@ use gpui::{
     App, AppContext, Size, TitlebarOptions, WindowBounds, WindowKind, WindowOptions, point, size,
 };
 
-use crate::toolbar::Toolbar;
+use crate::toolbar::{Toolbar, ToolbarStyle};
 
 pub use gpui::{
     Context, IntoElement, ParentElement, Render, Rgba, Styled, Window, WindowBackgroundAppearance,
@@ -33,9 +33,96 @@ pub enum WindowChrome {
 }
 
 impl WindowChrome {
-    /// Returns the title bar transparency.
     const fn title_bar_is_transparent(&self) -> bool {
         matches!(self, Self::TransparentTitleBar)
+    }
+
+    const fn fixed_corner_radius_floor(&self) -> f32 {
+        match self {
+            Self::TransparentTitleBar
+            | Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Expanded | ToolbarStyle::Preference,
+                        ..
+                    },
+                ..
+            }) => 16.0,
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::UnifiedCompact,
+                        ..
+                    },
+                ..
+            }) => 20.0,
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Automatic | ToolbarStyle::Unified,
+                        ..
+                    },
+                ..
+            }) => 26.0,
+        }
+    }
+
+    const fn name(&self) -> &'static str {
+        match self {
+            Self::TransparentTitleBar => "transparent title-bar chrome",
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Automatic,
+                        ..
+                    },
+                ..
+            }) => "automatic toolbar chrome",
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Expanded,
+                        ..
+                    },
+                ..
+            }) => "expanded toolbar chrome",
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Preference,
+                        ..
+                    },
+                ..
+            }) => "preferences toolbar chrome",
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::Unified,
+                        ..
+                    },
+                ..
+            }) => "unified toolbar chrome",
+            Self::Toolbar(Toolbar {
+                configuration:
+                    crate::toolbar::ToolbarConfiguration {
+                        style: ToolbarStyle::UnifiedCompact,
+                        ..
+                    },
+                ..
+            }) => "compact unified toolbar chrome",
+        }
+    }
+}
+
+fn validate_fixed_corner_radius(radius: f32, chrome: &WindowChrome) -> Result<(), String> {
+    let minimum = chrome.fixed_corner_radius_floor();
+    if radius.is_finite() && radius >= minimum {
+        Ok(())
+    } else {
+        Err(format!(
+            "the fixed window corner radius must be finite and at least {minimum} points for {}",
+            chrome.name(),
+        ))
     }
 }
 
@@ -44,11 +131,12 @@ impl WindowChrome {
 pub enum WindowCornerRadius {
     /// Uses the corner treatment supplied by AppKit.
     System,
-    /// Clips the window content to the supplied radius in logical pixels.
+    /// Shapes the titled window and its shadow to the supplied radius in logical pixels.
     ///
-    /// Fixed radii require [`WindowChrome::TransparentTitleBar`] because AppKit
-    /// draws native toolbar material outside the public content-view hierarchy.
-    /// AppKit's system corner clipping remains a lower bound.
+    /// AppKit's frame mask is a lower bound. The minimum is 16 points for a
+    /// transparent title bar, expanded toolbar, or preferences toolbar; 20
+    /// points for a compact unified toolbar; and 26 points for an automatic or
+    /// unified toolbar. [`run`] rejects lower, negative, or non-finite values.
     Fixed(f32),
 }
 
@@ -80,8 +168,9 @@ impl WindowBuilder {
     /// The controls position applies only to transparent title bars because
     /// AppKit positions controls for toolbar chrome. A fixed corner radius
     /// applies to all four outer corners in logical pixels. The background
-    /// appearance applies only to standard backgrounds; visual-effect backgrounds require
-    /// a transparent GPUI surface so the AppKit material remains visible.
+    /// appearance applies only to standard backgrounds; visual-effect
+    /// backgrounds require a transparent GPUI surface so the AppKit material
+    /// remains visible.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: impl Into<String>,
@@ -190,8 +279,8 @@ impl WindowBuilder {
 /// # Panics
 ///
 /// This function panics off the main thread, on systems before macOS 26.1, when
-/// a fixed corner radius is combined with toolbar chrome, and when the window
-/// fails to open.
+/// a fixed corner radius is below the system floor for the selected chrome or
+/// is not finite, and when the window fails to open.
 pub fn run<V>(window: WindowBuilder, build_root: impl FnOnce(&mut Context<V>) -> V + 'static)
 where
     V: Render + 'static,
@@ -204,10 +293,8 @@ where
         let corner_radius = match window.corner_radius {
             WindowCornerRadius::System => None,
             WindowCornerRadius::Fixed(radius) => {
-                assert!(
-                    matches!(&chrome, WindowChrome::TransparentTitleBar),
-                    "a fixed window corner radius requires transparent title-bar chrome"
-                );
+                validate_fixed_corner_radius(radius, &chrome)
+                    .unwrap_or_else(|error| panic!("{error}"));
                 Some(radius)
             }
         };
@@ -233,4 +320,49 @@ where
         .expect("the window must open");
         cx.activate(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::toolbar::{ToolbarConfiguration, ToolbarDisplayMode};
+
+    fn toolbar_chrome(style: ToolbarStyle) -> WindowChrome {
+        WindowChrome::Toolbar(Toolbar::new(
+            "test.toolbar",
+            ToolbarConfiguration {
+                display_mode: ToolbarDisplayMode::System,
+                style,
+                autosaves_configuration: false,
+                allows_user_customization: false,
+            },
+        ))
+    }
+
+    #[test]
+    fn fixed_corner_radius_floors_follow_chrome_presentation() {
+        let cases = [
+            (WindowChrome::TransparentTitleBar, 16.0),
+            (toolbar_chrome(ToolbarStyle::Automatic), 26.0),
+            (toolbar_chrome(ToolbarStyle::Expanded), 16.0),
+            (toolbar_chrome(ToolbarStyle::Preference), 16.0),
+            (toolbar_chrome(ToolbarStyle::Unified), 26.0),
+            (toolbar_chrome(ToolbarStyle::UnifiedCompact), 20.0),
+        ];
+
+        for (chrome, minimum) in cases {
+            assert_eq!(chrome.fixed_corner_radius_floor(), minimum);
+            assert!(validate_fixed_corner_radius(minimum, &chrome).is_ok());
+            assert!(validate_fixed_corner_radius(minimum - 1.0, &chrome).is_err());
+        }
+    }
+
+    #[test]
+    fn fixed_corner_radius_rejects_non_finite_values() {
+        for radius in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(
+                validate_fixed_corner_radius(radius, &WindowChrome::TransparentTitleBar).is_err()
+            );
+        }
+    }
 }

@@ -9,8 +9,8 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Caller-controlled window corner radii for transparent-title-bar windows with
-  standard or visual-effect backgrounds.
+- Caller-controlled outer corner radii and shape-following shadows for titled
+  windows with transparent title bars or native toolbars.
 
 ### Changed
 

@@ -2,7 +2,7 @@
 
 use gpui::Window;
 use objc2::MainThreadMarker;
-use objc2_app_kit::NSColor;
+use objc2_app_kit::{NSColor, NSWindowStyleMask};
 
 use super::handle::NativeWindowHandle;
 
@@ -14,6 +14,7 @@ pub(crate) fn configure_corner_radius(
 ) -> Result<(), String> {
     let handle = NativeWindowHandle::acquire(gpui_window, mtm)?;
     let window = handle.window();
+    window.setStyleMask(window.styleMask() | NSWindowStyleMask::FullSizeContentView);
     let content_view = window
         .contentView()
         .ok_or("the window content view must exist")?;
@@ -24,10 +25,9 @@ pub(crate) fn configure_corner_radius(
 
     layer.setCornerRadius(f64::from(corner_radius));
     layer.setMasksToBounds(true);
+    // For a non-opaque window, AppKit intersects its frame mask with drawn alpha.
     window.setOpaque(false);
-    // A nonzero transparent alpha preserves AppKit's window shadow.
-    let background = NSColor::colorWithSRGBRed_green_blue_alpha(0.0, 0.0, 0.0, 0.0001);
-    window.setBackgroundColor(Some(&background));
+    window.setBackgroundColor(Some(&NSColor::clearColor()));
     window.invalidateShadow();
     Ok(())
 }

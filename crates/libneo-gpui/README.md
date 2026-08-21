@@ -9,7 +9,7 @@ and uses public AppKit APIs.
 ## Features
 
 - AppKit windows with a transparent title bar or a native toolbar.
-- Caller-defined corner radii for transparent-title-bar windows.
+- Caller-defined outer corner radii and shape-following shadows for titled windows.
 - Window backgrounds with `NSVisualEffectView` materials.
 - Glass effects that take their position from GPUI layout.
 - Native text tables with the system scroll edge effect.
@@ -165,17 +165,32 @@ let window = WindowBuilder::new(
 Toolbar action availability follows the focused GPUI dispatch path. Use
 `ToolbarItem::enabled(false)` for an explicitly unavailable item.
 
-Use `WindowCornerRadius::Fixed(24.0)` with
-`WindowChrome::TransparentTitleBar` to increase the corner radius. AppKit draws
-native toolbar material outside the public content-view hierarchy, so fixed
-radii do not support `WindowChrome::Toolbar`; select
-`WindowCornerRadius::System` for toolbar windows. AppKit's system clipping is a
-lower bound, so a fixed value cannot make its corners less rounded.
+Use `WindowCornerRadius::Fixed(32.0)` with either titled chrome variant to
+shape the outer window and its system shadow. libneo makes the window
+non-opaque, clears its native background, and clips all application-drawn
+pixels to the requested radius. The system frame mask intersects that drawn
+shape, so callers can make a titled window rounder but not squarer.
 
-Run `cargo run -p libneo-gpui --example window_corners` to inspect the fixed
-radius with a standard background, or append `-- visual-effect` for a native
-material background. Run `cargo run -p libneo-gpui --example toolbar -- empty`
-or replace `empty` with `declared` to inspect the toolbar conformance example.
+The minimum accepted fixed radius depends on the chrome presentation:
+
+| Chrome | Minimum radius |
+| --- | ---: |
+| Transparent title bar | 16 pt |
+| Automatic toolbar | 26 pt |
+| Expanded toolbar | 16 pt |
+| Preferences toolbar | 16 pt |
+| Unified toolbar | 26 pt |
+| Compact unified toolbar | 20 pt |
+
+`run` rejects non-finite values and values below the applicable floor instead
+of silently accepting a system-clamped result. `WindowCornerRadius::System`
+continues to delegate the choice to AppKit.
+
+Run `cargo run -p libneo-gpui --example window_corners` to inspect a fixed
+radius with a standard background, append `-- visual-effect` for a native
+material background, or append `-- toolbar` for a unified native toolbar. Run
+`cargo run -p libneo-gpui --example toolbar -- empty` (or `declared`) to inspect
+the toolbar conformance example.
 
 ## Build
 

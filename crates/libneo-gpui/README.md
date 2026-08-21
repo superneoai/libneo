@@ -13,6 +13,7 @@ and uses public AppKit APIs.
 - Glass effects that take their position from GPUI layout.
 - Native text tables with the system scroll edge effect.
 - Themes that follow the system appearance.
+- Native application, Window, and Help menus backed by GPUI actions.
 - Overlay placement.
 
 ## Consumer setup
@@ -100,6 +101,23 @@ fn main() {
 ```
 
 `libneo::window::run` uses this same lifecycle automatically.
+
+Install a menu bar after libneo initialization. Standard constructors supply the
+macOS application, Window, and Help menu structure; custom menus and submenus
+use the same compact builders. Menu commands and shortcuts dispatch GPUI
+actions, so focused GPUI handlers also control command availability.
+
+```rust
+use libneo::menu::{Menu, MenuBar};
+
+MenuBar::new()
+    .menus([Menu::application("Example"), Menu::window(), Menu::help()])
+    .install(cx);
+```
+
+Register a handler for `libneo::menu::Settings` when the application has a
+settings interface. Without a handler, GPUI leaves the standard Settings item
+visible but unavailable.
 
 ## Build
 

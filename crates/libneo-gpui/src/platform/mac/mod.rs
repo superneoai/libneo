@@ -3,6 +3,7 @@
 pub(crate) mod chrome;
 pub(crate) mod glass;
 mod handle;
+pub(crate) mod menu;
 pub(crate) mod table;
 pub(crate) mod visual_effect;
 

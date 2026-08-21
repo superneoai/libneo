@@ -13,3 +13,4 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A dependency-neutral `libneo` facade with an empty default feature set.
 - An opt-in `gpui` feature that re-exports the `libneo-gpui` adapter.
 - The focused `libneo-gpui` package for the GPUI and AppKit APIs.
+- GPUI-backed application menu bars through the facade's `menu` module.

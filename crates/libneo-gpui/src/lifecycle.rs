@@ -49,6 +49,7 @@ fn install_components(cx: &mut App) {
         crate::native_views::init(cx);
     }
     if plan.lifecycle {
+        crate::menu::init(cx);
         cx.set_global(Lifecycle);
     }
 }

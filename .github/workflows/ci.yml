@@ -27,20 +27,9 @@ jobs:
       - name: Format
         run: cargo fmt --all --check
       - name: Verify facade dependency isolation
-        run: |
-          tree_file=$(mktemp)
-          cargo tree -p libneo --no-default-features --locked > "$tree_file"
-          cat "$tree_file"
-          if [ "$(wc -l < "$tree_file" | tr -d ' ')" -ne 1 ]; then
-            echo "the default libneo facade must have no dependencies" >&2
-            exit 1
-          fi
+        run: cargo test -p workspace-checks tests::facade_has_no_dependencies --locked -- --exact --nocapture
       - name: Verify GPUI feature graph
-        run: |
-          tree_file=$(mktemp)
-          cargo tree -p libneo --features gpui --locked > "$tree_file"
-          cat "$tree_file"
-          grep -F "libneo-gpui v0.1.0-alpha.1" "$tree_file"
+        run: cargo test -p workspace-checks tests::gpui_feature_includes_adapter --locked -- --exact --nocapture
       - name: Build
         run: cargo build --workspace --locked
       - name: Check
@@ -68,8 +57,7 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings -D missing-docs
       - name: Verify the SDK
-        run: |
-          test "$(xcrun --show-sdk-version | cut -d. -f1)" -ge 26
+        run: cargo test -p workspace-checks tests::installed_sdk_is_supported --locked -- --exact --nocapture
 
   licenses:
     runs-on: ubuntu-latest

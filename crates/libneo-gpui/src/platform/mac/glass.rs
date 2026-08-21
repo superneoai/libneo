@@ -7,13 +7,11 @@ use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSGlassEffectContainerView, NSGlassEffectView,
-    NSGlassEffectViewStyle, NSTextField, NSView, NSWindowOrderingMode,
+    NSGlassEffectViewStyle, NSView, NSWindowOrderingMode,
 };
-use objc2_foundation::{NSPoint, NSRect, NSString};
+use objc2_foundation::NSRect;
 
-use crate::glass::{
-    GlassEffectConfiguration, GlassEffectContent, GlassEffectFrame, GlassEffectStyle,
-};
+use crate::glass::{GlassEffectConfiguration, GlassEffectFrame, GlassEffectStyle};
 
 use super::handle::{NativeWindowHandle, appkit_frame};
 
@@ -196,7 +194,7 @@ impl NativeGlassEffectGroup {
         debug_assert!(container.contentView().is_some());
         window.superview().addSubview_positioned_relativeTo(
             &container,
-            NSWindowOrderingMode::Above,
+            NSWindowOrderingMode::Below,
             Some(window.gpui_view()),
         );
         Ok(Self {
@@ -286,10 +284,9 @@ fn upsert_ungrouped_effect(
     }
 }
 
-/// Holds one `NSGlassEffectView` and its native content.
+/// Holds one `NSGlassEffectView` below the shared GPUI content host.
 struct NativeGlassEffect {
     view: Retained<NSGlassEffectView>,
-    _content: Option<Retained<NSView>>,
     configuration: GlassEffectConfiguration,
 }
 
@@ -310,24 +307,10 @@ impl NativeGlassEffect {
         let tint = configuration.tint.map(super::color::rgba_to_ns_color);
         view.setTintColor(tint.as_deref());
 
-        let content = configuration.content.as_ref().map(|content| match content {
-            GlassEffectContent::Label(text) => {
-                let text = NSString::from_str(text);
-                let label = NSTextField::labelWithString(&text, mtm);
-                label.setFrame(local_bounds(frame));
-                label.setAutoresizingMask(
-                    NSAutoresizingMaskOptions::ViewWidthSizable
-                        | NSAutoresizingMaskOptions::ViewHeightSizable,
-                );
-                label.into_super().into_super()
-            }
-        });
-        view.setContentView(content.as_deref());
-
         if let Some(relative_to) = relative_to {
             parent.addSubview_positioned_relativeTo(
                 &view,
-                NSWindowOrderingMode::Above,
+                NSWindowOrderingMode::Below,
                 Some(relative_to),
             );
         } else {
@@ -336,7 +319,6 @@ impl NativeGlassEffect {
 
         Self {
             view,
-            _content: content,
             configuration,
         }
     }
@@ -349,13 +331,6 @@ impl Drop for NativeGlassEffect {
             "the glass effect releases on the main thread"
         );
         self.view.removeFromSuperview();
-    }
-}
-
-fn local_bounds(frame: NSRect) -> NSRect {
-    NSRect {
-        origin: NSPoint { x: 0.0, y: 0.0 },
-        size: frame.size,
     }
 }
 

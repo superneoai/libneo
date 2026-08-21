@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/libneo", "crates/libneo-gpui", "vendor/ztracing"]
+members = [
+  "crates/libneo",
+  "crates/libneo-gpui",
+  "tests/workspace-checks",
+  "vendor/ztracing",
+]
 exclude = ["vendor/block"]
 resolver = "3"
 

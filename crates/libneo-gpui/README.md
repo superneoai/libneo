@@ -100,8 +100,10 @@ fn main() {
 }
 ```
 
-`libneo::window::run` uses this same lifecycle automatically. Installation does
-not initialize GPUI colors or application theme state; the consumer owns both.
+`libneo::window::run` uses this same lifecycle automatically. After calling
+`install`, use `WindowBuilder::open` to apply the same presentation to every
+additional window. Installation does not initialize GPUI colors or application
+theme state; the consumer owns both.
 
 Install a menu bar after libneo initialization. Standard constructors supply the
 macOS application, Window, and Help menu structure; custom menus and submenus
@@ -165,17 +167,38 @@ let window = WindowBuilder::new(
 Toolbar action availability follows the focused GPUI dispatch path. Use
 `ToolbarItem::enabled(false)` for an explicitly unavailable item.
 
-Use `WindowCornerRadius::Fixed(24.0)` with
-`WindowChrome::TransparentTitleBar` to increase the corner radius. AppKit draws
-native toolbar material outside the public content-view hierarchy, so fixed
-radii do not support `WindowChrome::Toolbar`; select
-`WindowCornerRadius::System` for toolbar windows. AppKit's system clipping is a
-lower bound, so a fixed value cannot make its corners less rounded.
+Use `WindowCornerRadius::Fixed(48.0)` with either chrome variant to shape the
+outer window and its system shadow. The adapter makes an `NSVisualEffectView`
+the window content root, applies a resizable rounded mask image, clips its
+subviews to the same radius, clears the native window background, and asks
+AppKit to recompute the shadow. A visual-effect background retains the exact
+semantic material selected by the caller; a standard opaque GPUI surface hides
+the mask host's material. AppKit's system frame mask remains a lower bound, so
+a caller can make a window rounder but not squarer.
+
+The minimum accepted fixed radius depends on the chrome presentation:
+
+| Chrome | Minimum radius |
+| --- | ---: |
+| Transparent title bar | 16 pt |
+| Automatic toolbar | 26 pt |
+| Expanded toolbar | 16 pt |
+| Preferences toolbar | 16 pt |
+| Unified toolbar | 26 pt |
+| Compact unified toolbar | 20 pt |
+
+`WindowBuilder::open` rejects non-finite values and values below the applicable
+named floor instead of silently accepting a system-clamped result. GPUI creates
+its native content tree before the open callback and does not replace it later;
+the adapter applies chrome first, installs the material root last, and retains
+that root until the window closes. It does not restore the previous content
+view during teardown.
 
 Run `cargo run -p libneo-gpui --example window_corners` to inspect the fixed
-radius with a standard background, or append `-- visual-effect` for a native
-material background. Run `cargo run -p libneo-gpui --example toolbar -- empty`
-or replace `empty` with `declared` to inspect the toolbar conformance example.
+radius with a standard background, append `-- visual-effect` for a native
+material background, or append `-- toolbar` for a unified native toolbar. Run
+`cargo run -p libneo-gpui --example toolbar -- empty` (or `declared`) to inspect
+the toolbar conformance example.
 
 ## Build
 

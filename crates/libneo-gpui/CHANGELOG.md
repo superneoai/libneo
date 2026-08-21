@@ -9,6 +9,9 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Caller-selected AppKit system-color resolution for Aqua and Dark Aqua,
+  effective-appearance observation, and Reduce Transparency and Reduce Motion
+  queries.
 - Caller-controlled outer corner radii and shape-following shadows for windows
   with transparent title bars or native toolbars.
 

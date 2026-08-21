@@ -9,6 +9,7 @@
 //! Existing GPUI applications call [`install`] before opening windows and wrap
 //! every window root that uses native elements in [`NativeRoot`].
 
+pub mod appearance;
 pub mod glass;
 pub mod layers;
 mod lifecycle;

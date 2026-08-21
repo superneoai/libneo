@@ -1,3 +1,4 @@
 target/
+/docs/
 /vendor/block/Cargo.lock
 .DS_Store

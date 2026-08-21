@@ -6,7 +6,6 @@ mod handle;
 pub(crate) mod menu;
 pub(crate) mod table;
 pub(crate) mod visual_effect;
-pub(crate) mod window;
 
 use objc2::MainThreadMarker;
 use objc2_foundation::{NSOperatingSystemVersion, NSProcessInfo};

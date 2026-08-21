@@ -18,7 +18,6 @@ gpui = { version = "=0.2.2", git = "https://github.com/zed-industries/zed", rev 
 gpui_platform = { version = "=0.1.0", git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6", features = [
   "font-kit",
 ] }
-refineable = { version = "=0.1.0", git = "https://github.com/zed-industries/zed", rev = "bc538def4545534201bbfcac4e95ac34ea6501b6" }
 objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
   "NSApplication",

@@ -6,6 +6,17 @@ adapter changes.
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The GPUI facade now requires callers to supply every application-owned
+  presentation choice.
+
+### Removed
+
+- The GPUI adapter's application-specific theme palette.
+
 ## [0.1.0-alpha.1]
 
 ### Added

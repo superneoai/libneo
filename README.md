@@ -11,9 +11,9 @@ Adapters are opt-in features.
 | `libneo` | Dependency-neutral facade; its default feature set is empty. |
 | `libneo-gpui` | GPUI and AppKit integration for macOS 26.1 and later. |
 
-Enable `libneo`'s `gpui` feature to preserve the existing API, including
-`libneo::install`, `libneo::NativeRoot`, and the public modules for windows,
-glass, tables, layers, and themes. The macOS 26.1 deployment-target check runs
+Enable `libneo`'s `gpui` feature to expose `libneo::install`,
+`libneo::NativeRoot`, and the public modules for windows,
+glass, tables, and layers. The macOS 26.1 deployment-target check runs
 only when you select `libneo-gpui`.
 
 ## Consumer setup

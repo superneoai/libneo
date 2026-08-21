@@ -2,8 +2,12 @@ use gpui::{
     App, Context, FocusHandle, Focusable, IntoElement, Render, Window, actions, div, prelude::*,
     rgb,
 };
-use libneo_gpui::toolbar::{Toolbar, ToolbarItem, ToolbarSystemItem};
-use libneo_gpui::window::{WindowBuilder, run};
+use libneo_gpui::toolbar::{
+    Toolbar, ToolbarConfiguration, ToolbarDisplayMode, ToolbarItem, ToolbarStyle, ToolbarSystemItem,
+};
+use libneo_gpui::window::{
+    WindowBackground, WindowBackgroundAppearance, WindowBuilder, WindowChrome, run,
+};
 
 const EMPTY: &str = "empty";
 
@@ -56,24 +60,37 @@ impl Render for Example {
     }
 }
 
+fn toolbar_configuration() -> ToolbarConfiguration {
+    ToolbarConfiguration {
+        display_mode: ToolbarDisplayMode::IconAndLabel,
+        style: ToolbarStyle::Unified,
+        autosaves_configuration: false,
+        allows_user_customization: false,
+    }
+}
+
 fn main() {
     let mode = std::env::args().nth(1).unwrap_or_else(|| EMPTY.to_owned());
-    let window = WindowBuilder::new()
-        .title(format!("Toolbar Example — {mode}"))
-        .size(720.0, 440.0);
-    let window = if mode == EMPTY {
-        window.toolbar(Toolbar::new("example.empty-toolbar"))
+    let toolbar = if mode == EMPTY {
+        Toolbar::new("example.empty-toolbar", toolbar_configuration())
     } else {
-        window.toolbar(
-            Toolbar::new("example.declared-toolbar").items([
-                ToolbarItem::action("example.fire", "Fire Action", Fire).symbol("bolt.fill"),
-                ToolbarItem::system(ToolbarSystemItem::FlexibleSpace),
-                ToolbarItem::action("example.disabled", "Disabled", Fire)
-                    .symbol("nosign")
-                    .enabled(false),
-            ]),
-        )
+        Toolbar::new("example.declared-toolbar", toolbar_configuration()).items([
+            ToolbarItem::action("example.fire", "Fire Action", Fire).symbol("bolt.fill"),
+            ToolbarItem::system(ToolbarSystemItem::FlexibleSpace),
+            ToolbarItem::action("example.disabled", "Disabled", Fire)
+                .symbol("nosign")
+                .enabled(false),
+        ])
     };
+    let window = WindowBuilder::new(
+        format!("Toolbar Example — {mode}"),
+        (720.0, 440.0),
+        (640.0, 320.0),
+        (12.0, 12.0),
+        WindowChrome::Toolbar(toolbar),
+        WindowBackground::Standard,
+        WindowBackgroundAppearance::Opaque,
+    );
 
     run(window, Example::new);
 }

@@ -5,6 +5,18 @@ This file records notable changes to libneo-gpui.
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Window, toolbar, glass, table, and overlay construction now requires every
+  application-owned presentation choice.
+
+### Removed
+
+- The application-specific theme palette and automatic GPUI color
+  initialization.
+
 ## [0.1.0-alpha.1]
 
 ### Added

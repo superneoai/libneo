@@ -1,6 +1,5 @@
 //! Integrates libneo-gpui with an existing GPUI application and its windows.
 
-use gpui::colors::GlobalColors;
 use gpui::{App, Context, Entity, Global, IntoElement, Render, Window};
 use objc2::MainThreadMarker;
 
@@ -17,7 +16,7 @@ impl Global for Lifecycle {}
 ///
 /// Call this once in the callback passed to `gpui_platform::Application::run`,
 /// before opening any windows. Calling it again on the same [`App`] is safe and
-/// leaves existing colors, theme state, and native registries intact.
+/// leaves existing native registries intact.
 ///
 /// Every window that uses libneo-gpui native elements must also wrap its root
 /// entity in [`NativeRoot`]. [`crate::window::run`] performs both steps
@@ -34,17 +33,9 @@ pub fn install(cx: &mut App) {
 
 fn install_components(cx: &mut App) {
     let plan = InstallPlan::for_state(ComponentState {
-        colors: cx.has_global::<GlobalColors>(),
-        theme: cx.has_global::<crate::theme::Theme>(),
         native_views: crate::native_views::is_initialized(cx),
         lifecycle: cx.has_global::<Lifecycle>(),
     });
-    if plan.colors {
-        cx.init_colors();
-    }
-    if plan.theme {
-        crate::theme::init(cx);
-    }
     if plan.native_views {
         crate::native_views::init(cx);
     }
@@ -56,16 +47,12 @@ fn install_components(cx: &mut App) {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ComponentState {
-    colors: bool,
-    theme: bool,
     native_views: bool,
     lifecycle: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct InstallPlan {
-    colors: bool,
-    theme: bool,
     native_views: bool,
     lifecycle: bool,
 }
@@ -73,8 +60,6 @@ struct InstallPlan {
 impl InstallPlan {
     fn for_state(state: ComponentState) -> Self {
         Self {
-            colors: !state.colors,
-            theme: !state.theme,
             native_views: !state.native_views,
             lifecycle: !state.lifecycle,
         }
@@ -120,7 +105,6 @@ impl<V: Render> NativeRoot<V> {
 impl<V: Render> Render for NativeRoot<V> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         assert_installed(cx);
-        crate::theme::observe_window(window, cx);
         crate::native_views::begin_frame(window, cx);
         self.content.clone()
     }
@@ -141,8 +125,6 @@ mod tests {
     #[test]
     fn first_install_initializes_every_component() {
         let plan = InstallPlan::for_state(ComponentState {
-            colors: false,
-            theme: false,
             native_views: false,
             lifecycle: false,
         });
@@ -150,8 +132,6 @@ mod tests {
         assert_eq!(
             plan,
             InstallPlan {
-                colors: true,
-                theme: true,
                 native_views: true,
                 lifecycle: true,
             }
@@ -161,8 +141,6 @@ mod tests {
     #[test]
     fn repeated_install_preserves_every_component() {
         let plan = InstallPlan::for_state(ComponentState {
-            colors: true,
-            theme: true,
             native_views: true,
             lifecycle: true,
         });
@@ -170,8 +148,6 @@ mod tests {
         assert_eq!(
             plan,
             InstallPlan {
-                colors: false,
-                theme: false,
                 native_views: false,
                 lifecycle: false,
             }
@@ -181,8 +157,6 @@ mod tests {
     #[test]
     fn partial_install_only_initializes_missing_components() {
         let plan = InstallPlan::for_state(ComponentState {
-            colors: true,
-            theme: false,
             native_views: true,
             lifecycle: false,
         });
@@ -190,8 +164,6 @@ mod tests {
         assert_eq!(
             plan,
             InstallPlan {
-                colors: false,
-                theme: true,
                 native_views: false,
                 lifecycle: true,
             }

@@ -6,20 +6,64 @@
 
 pub use gpui::Action;
 
+/// Selects how AppKit displays toolbar items.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ToolbarDisplayMode {
+    /// Uses the display mode selected by the system or user.
+    System,
+    /// Shows each item's icon and label.
+    IconAndLabel,
+    /// Shows only item icons.
+    IconOnly,
+    /// Shows only item labels.
+    LabelOnly,
+}
+
+/// Selects the AppKit toolbar style.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ToolbarStyle {
+    /// Lets AppKit choose the toolbar style.
+    Automatic,
+    /// Uses the expanded toolbar style.
+    Expanded,
+    /// Uses the preferences-window toolbar style.
+    Preference,
+    /// Uses the unified toolbar style.
+    Unified,
+    /// Uses the compact unified toolbar style.
+    UnifiedCompact,
+}
+
+/// Configures native toolbar presentation and persistence.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ToolbarConfiguration {
+    /// Controls how toolbar item icons and labels appear.
+    pub display_mode: ToolbarDisplayMode,
+    /// Controls the toolbar's AppKit style.
+    pub style: ToolbarStyle,
+    /// Controls whether AppKit persists toolbar changes under its identifier.
+    pub autosaves_configuration: bool,
+    /// Controls whether the user can customize toolbar items.
+    pub allows_user_customization: bool,
+}
+
 /// A native toolbar installed in one window.
 #[derive(Clone, Debug)]
 pub struct Toolbar {
     pub(crate) identifier: String,
+    pub(crate) configuration: ToolbarConfiguration,
     pub(crate) items: Vec<ToolbarItem>,
 }
 
 impl Toolbar {
-    /// Creates an empty toolbar with the supplied AppKit identifier.
+    /// Creates an empty toolbar with the supplied AppKit identifier and
+    /// presentation configuration.
     ///
     /// Use a stable identifier that is unique to this kind of window.
-    pub fn new(identifier: impl Into<String>) -> Self {
+    pub fn new(identifier: impl Into<String>, configuration: ToolbarConfiguration) -> Self {
         Self {
             identifier: identifier.into(),
+            configuration,
             items: Vec::new(),
         }
     }
@@ -166,18 +210,30 @@ pub enum ToolbarSystemItem {
 
 #[cfg(test)]
 mod tests {
-    use super::{Toolbar, ToolbarItem, ToolbarItemKind, ToolbarSystemItem};
+    use super::{
+        Toolbar, ToolbarConfiguration, ToolbarDisplayMode, ToolbarItem, ToolbarItemKind,
+        ToolbarStyle, ToolbarSystemItem,
+    };
+
+    fn configuration() -> ToolbarConfiguration {
+        ToolbarConfiguration {
+            display_mode: ToolbarDisplayMode::IconAndLabel,
+            style: ToolbarStyle::Unified,
+            autosaves_configuration: false,
+            allows_user_customization: false,
+        }
+    }
 
     #[test]
     fn toolbar_can_be_empty() {
-        let toolbar = Toolbar::new("example.toolbar");
+        let toolbar = Toolbar::new("example.toolbar", configuration());
 
         assert!(toolbar.items.is_empty());
     }
 
     #[test]
     fn action_state_and_system_items_are_preserved() {
-        let toolbar = Toolbar::new("example.toolbar").items([
+        let toolbar = Toolbar::new("example.toolbar", configuration()).items([
             ToolbarItem::action("example.search", "Search", gpui::NoAction)
                 .symbol("magnifyingglass")
                 .enabled(false),

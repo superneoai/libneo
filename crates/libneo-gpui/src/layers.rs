@@ -9,29 +9,41 @@ use gpui::{
 
 pub use gpui::{Anchor as AnchorCorner, Edges, point};
 
-/// The default paint priority of [`overlay`].
-pub const OVERLAY_PRIORITY: usize = 0;
-
 /// Selects the origin of the anchor position.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LayerPositionMode {
     /// Uses window coordinates.
-    #[default]
     Window,
     /// Uses coordinates of the parent element.
     Local,
 }
 
 /// Selects the method that keeps content inside the window.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LayerFitting {
     /// Moves the anchor to the opposite side.
-    #[default]
     SwitchAnchor,
     /// Moves the content to the nearest window edge.
     SnapToWindow,
     /// Moves the content to the nearest window edge, and keeps the margins.
     SnapToWindowWithMargin(Edges<Pixels>),
+}
+
+/// Configures the placement and paint order of an overlay.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OverlayConfiguration {
+    /// Sets the corner used to anchor the content.
+    pub anchor: AnchorCorner,
+    /// Sets the anchor position, or uses GPUI's position when absent.
+    pub position: Option<Point<Pixels>>,
+    /// Adds an offset to the anchor position when present.
+    pub offset: Option<Point<Pixels>>,
+    /// Selects the coordinate space for the anchor position.
+    pub position_mode: LayerPositionMode,
+    /// Selects how the content remains inside the window.
+    pub fitting: LayerFitting,
+    /// Sets the paint priority; higher values paint above lower values.
+    pub priority: usize,
 }
 
 /// Places floating content in the window.
@@ -45,16 +57,16 @@ pub struct Overlay {
     priority: usize,
 }
 
-/// Creates an overlay with [`OVERLAY_PRIORITY`].
-pub fn overlay(child: impl IntoElement) -> Overlay {
+/// Creates an overlay with caller-supplied placement and paint order.
+pub fn overlay(child: impl IntoElement, configuration: OverlayConfiguration) -> Overlay {
     Overlay {
         child: child.into_any_element(),
-        anchor: AnchorCorner::TopLeft,
-        position: None,
-        offset: None,
-        position_mode: LayerPositionMode::Window,
-        fitting: LayerFitting::SwitchAnchor,
-        priority: OVERLAY_PRIORITY,
+        anchor: configuration.anchor,
+        position: configuration.position,
+        offset: configuration.offset,
+        position_mode: configuration.position_mode,
+        fitting: configuration.fitting,
+        priority: configuration.priority,
     }
 }
 

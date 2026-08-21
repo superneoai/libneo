@@ -9,6 +9,7 @@ and uses public AppKit APIs.
 ## Features
 
 - AppKit windows with a transparent title bar or a native toolbar.
+- Caller-defined corner radii for transparent-title-bar windows.
 - Window backgrounds with `NSVisualEffectView` materials.
 - Glass effects that take their position from GPUI layout.
 - Native text tables with the system scroll edge effect.
@@ -123,7 +124,7 @@ Build native toolbars from caller-owned identifiers, presentation, labels, SF
 Symbols, and GPUI actions. System items cover spacing and standard AppKit
 commands. An empty item list produces an empty toolbar. Window construction
 requires every presentation choice; no title, dimensions, control position,
-chrome, or background is inferred.
+corner radius, chrome, or background is inferred.
 
 ```rust
 use libneo::toolbar::{
@@ -132,6 +133,7 @@ use libneo::toolbar::{
 };
 use libneo::window::{
     WindowBackground, WindowBackgroundAppearance, WindowBuilder, WindowChrome,
+    WindowCornerRadius,
 };
 
 let toolbar = Toolbar::new(
@@ -153,6 +155,7 @@ let window = WindowBuilder::new(
     (960.0, 640.0),
     (640.0, 480.0),
     (12.0, 12.0),
+    WindowCornerRadius::System,
     WindowChrome::Toolbar(toolbar),
     WindowBackground::Standard,
     WindowBackgroundAppearance::Opaque,
@@ -162,8 +165,17 @@ let window = WindowBuilder::new(
 Toolbar action availability follows the focused GPUI dispatch path. Use
 `ToolbarItem::enabled(false)` for an explicitly unavailable item.
 
-Run `cargo run -p libneo-gpui --example toolbar -- empty` or replace `empty`
-with `declared` to inspect the conformance example.
+Use `WindowCornerRadius::Fixed(24.0)` with
+`WindowChrome::TransparentTitleBar` to increase the corner radius. AppKit draws
+native toolbar material outside the public content-view hierarchy, so fixed
+radii do not support `WindowChrome::Toolbar`; select
+`WindowCornerRadius::System` for toolbar windows. AppKit's system clipping is a
+lower bound, so a fixed value cannot make its corners less rounded.
+
+Run `cargo run -p libneo-gpui --example window_corners` to inspect the fixed
+radius with a standard background, or append `-- visual-effect` for a native
+material background. Run `cargo run -p libneo-gpui --example toolbar -- empty`
+or replace `empty` with `declared` to inspect the toolbar conformance example.
 
 ## Build
 

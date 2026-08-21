@@ -39,6 +39,19 @@ impl WindowChrome {
     }
 }
 
+/// Selects the window corner treatment.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum WindowCornerRadius {
+    /// Uses the corner treatment supplied by AppKit.
+    System,
+    /// Clips the window content to the supplied radius in logical pixels.
+    ///
+    /// Fixed radii require [`WindowChrome::TransparentTitleBar`] because AppKit
+    /// draws native toolbar material outside the public content-view hierarchy.
+    /// AppKit's system corner clipping remains a lower bound.
+    Fixed(f32),
+}
+
 /// Selects the window background.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowBackground {
@@ -55,6 +68,7 @@ pub struct WindowBuilder {
     size: (f32, f32),
     minimum_size: (f32, f32),
     window_controls_position: (f32, f32),
+    corner_radius: WindowCornerRadius,
     background_appearance: WindowBackgroundAppearance,
     background: WindowBackground,
     chrome: WindowChrome,
@@ -64,14 +78,17 @@ impl WindowBuilder {
     /// Creates a builder from caller-supplied window presentation.
     ///
     /// The controls position applies only to transparent title bars because
-    /// AppKit positions controls for toolbar chrome. The background appearance
-    /// applies only to standard backgrounds; visual-effect backgrounds require
+    /// AppKit positions controls for toolbar chrome. A fixed corner radius
+    /// applies to all four outer corners in logical pixels. The background
+    /// appearance applies only to standard backgrounds; visual-effect backgrounds require
     /// a transparent GPUI surface so the AppKit material remains visible.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: impl Into<String>,
         size: (f32, f32),
         minimum_size: (f32, f32),
         window_controls_position: (f32, f32),
+        corner_radius: WindowCornerRadius,
         chrome: WindowChrome,
         background: WindowBackground,
         background_appearance: WindowBackgroundAppearance,
@@ -81,6 +98,7 @@ impl WindowBuilder {
             size,
             minimum_size,
             window_controls_position,
+            corner_radius,
             background_appearance,
             background,
             chrome,
@@ -109,6 +127,12 @@ impl WindowBuilder {
     /// [`WindowChrome::TransparentTitleBar`].
     pub fn window_controls_position(mut self, x: f32, y: f32) -> Self {
         self.window_controls_position = (x, y);
+        self
+    }
+
+    /// Sets the window corner treatment.
+    pub fn corner_radius(mut self, corner_radius: WindowCornerRadius) -> Self {
+        self.corner_radius = corner_radius;
         self
     }
 
@@ -165,8 +189,9 @@ impl WindowBuilder {
 ///
 /// # Panics
 ///
-/// This function panics off the main thread, on systems before macOS 26.1, and
-/// when the window fails to open.
+/// This function panics off the main thread, on systems before macOS 26.1, when
+/// a fixed corner radius is combined with toolbar chrome, and when the window
+/// fails to open.
 pub fn run<V>(window: WindowBuilder, build_root: impl FnOnce(&mut Context<V>) -> V + 'static)
 where
     V: Render + 'static,
@@ -176,6 +201,16 @@ where
         let options = window.window_options(cx);
         let background = window.background;
         let chrome = window.chrome;
+        let corner_radius = match window.corner_radius {
+            WindowCornerRadius::System => None,
+            WindowCornerRadius::Fixed(radius) => {
+                assert!(
+                    matches!(&chrome, WindowChrome::TransparentTitleBar),
+                    "a fixed window corner radius requires transparent title-bar chrome"
+                );
+                Some(radius)
+            }
+        };
 
         cx.open_window(options, move |gpui_window, cx| {
             let mtm = crate::lifecycle::main_thread_marker(cx);
@@ -183,6 +218,15 @@ where
                 .expect("the window chrome must apply");
             crate::native_views::configure_window_background(gpui_window, background, mtm, cx)
                 .expect("the window background must apply");
+            if let Some(corner_radius) = corner_radius {
+                crate::native_views::configure_window_corner_radius(
+                    gpui_window,
+                    corner_radius,
+                    mtm,
+                    cx,
+                )
+                .expect("the window corner radius must apply");
+            }
             let content = cx.new(build_root);
             cx.new(|_| crate::NativeRoot::new(content))
         })

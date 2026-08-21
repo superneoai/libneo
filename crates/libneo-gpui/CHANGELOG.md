@@ -7,6 +7,11 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Caller-controlled window corner radii for transparent-title-bar windows with
+  standard or visual-effect backgrounds.
+
 ### Changed
 
 - Window, toolbar, glass, table, and overlay construction now requires every
